@@ -28,7 +28,7 @@ class ExcelFormatterApp extends StatelessWidget {
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  static const List<_ExcelSection> sections = [
+  static const List<_ExcelSection> _sections = [
     _ExcelSection(
       title: 'كشف النسبة',
       description: 'تحليل استهلاك السيارات وحساب النسب',
@@ -44,7 +44,7 @@ class HomePage extends StatelessWidget {
       description: 'معالجة وتنسيق ملفات الفواتير',
       icon: Icons.receipt_long_rounded,
     ),
-    // أضف العمليات الجديدة هنا فقط لاحقًا.
+    // أضف العمليات الجديدة هنا لاحقًا.
   ];
 
   void _openSection(BuildContext context, String title) {
@@ -140,7 +140,7 @@ class HomePage extends StatelessWidget {
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: sections.length,
+                      itemCount: _sections.length,
                       gridDelegate:
                           SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: crossAxisCount,
@@ -149,7 +149,7 @@ class HomePage extends StatelessWidget {
                         childAspectRatio: width < 600 ? 1.05 : 1.25,
                       ),
                       itemBuilder: (context, index) {
-                        final section = sections[index];
+                        final section = _sections[index];
 
                         return _ExcelActionCard(
                           section: section,
@@ -215,11 +215,11 @@ class _ExcelActionCard extends StatelessWidget {
                 width: 58,
                 height: 58,
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.10),
+                  color: Colors.blue.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
-                  section.icon,
+                child: const Icon(
+                  Icons.percent_rounded,
                   size: 30,
                   color: Colors.blue,
                 ),
