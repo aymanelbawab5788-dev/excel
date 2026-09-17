@@ -22,7 +22,6 @@ class _PercentageScreenState extends State<PercentageScreen> {
       TextEditingController(text: 'كشف نسبة');
 
   bool _isProcessing = false;
-  bool _isReady = false;
 
   String _status = 'ارفع ملف Excel للبدء';
 
@@ -43,10 +42,20 @@ class _PercentageScreenState extends State<PercentageScreen> {
         _selectedBytes = bytes;
         _selectedFileName = file.name;
         _preparedFile = null;
-        _isReady = false;
-        _status = 'تم اختيار الملف، جاهز للمعالجة';
+        _status = 'جاري تجهيز كشف النسبة...';
+        _isProcessing = true;
       });
+
+      await _processFile();
     } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isProcessing = false;
+        _preparedFile = null;
+        _status = 'حدث خطأ أثناء اختيار الملف';
+      });
+
       _showError('حدث خطأ أثناء اختيار الملف:\n$e');
     }
   }
@@ -56,13 +65,6 @@ class _PercentageScreenState extends State<PercentageScreen> {
       _showError('اختر ملف Excel أولاً');
       return;
     }
-
-    setState(() {
-      _isProcessing = true;
-      _isReady = false;
-      _preparedFile = null;
-      _status = 'جاري تجهيز كشف النسبة...';
-    });
 
     try {
       final input = Excel.decodeBytes(_selectedBytes!);
@@ -88,6 +90,10 @@ class _PercentageScreenState extends State<PercentageScreen> {
         detailsMap,
       );
 
+      setState(() {
+        _status = 'جاري إنشاء الملف النهائي...';
+      });
+
       final encoded = output.encode();
 
       if (encoded == null) {
@@ -98,23 +104,19 @@ class _PercentageScreenState extends State<PercentageScreen> {
 
       setState(() {
         _preparedFile = Uint8List.fromList(encoded);
-        _isReady = true;
+        _isProcessing = false;
         _status = 'تم تجهيز كشف النسبة بنجاح — اضغط تصدير الملف';
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
-        _status = 'حدث خطأ أثناء المعالجة';
+        _isProcessing = false;
         _preparedFile = null;
-        _isReady = false;
+        _status = 'حدث خطأ أثناء المعالجة';
       });
 
       _showError('تعذر معالجة الملف:\n$e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-      }
     }
   }
 
@@ -283,6 +285,56 @@ class _PercentageScreenState extends State<PercentageScreen> {
 
       final details = detailsMap[vehicle] ?? {};
 
+      final بورسعيد = _numberValueFromDynamic(
+        details['بورسعيد'],
+      );
+
+      final اسماعيلية = _numberValueFromDynamic(
+        details['إسماعيلية'],
+      );
+
+      final سويس = _numberValueFromDynamic(
+        details['سويس'],
+      );
+
+      final كارت = _numberValueFromDynamic(
+        details['كارت ذكي'],
+      );
+
+      final غاز = _numberValueFromDynamic(
+        details['غاز'],
+      );
+
+      final totalQuantity =
+          بورسعيد + اسماعيلية + سويس + كارت + غاز;
+
+      final startOdometer = _numberValue(
+        row,
+        reportHeaders['عداد البداية'],
+      );
+
+      final endOdometer = _numberValue(
+        row,
+        reportHeaders['آخر عداد بالفترة'],
+      );
+
+      final distance = endOdometer - startOdometer;
+
+      final actualPercentage = distance > 0
+          ? (totalQuantity / distance) * 100
+          : 0;
+
+      final standardPercentage = _numberValue(
+        row,
+        reportHeaders['النسبة القياسية'],
+      );
+
+      final excessPercentage =
+          actualPercentage - (standardPercentage * 1.5);
+
+      final status =
+          excessPercentage > 0 ? 'متجاوز' : 'طبيعي';
+
       final excelRow = outputRow + 1;
 
       output
@@ -319,95 +371,91 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         4,
         outputRow,
-        details['بورسعيد'] ?? 0,
+        بورسعيد,
       );
 
       _setValue(
         output,
         5,
         outputRow,
-        details['إسماعيلية'] ?? 0,
+        اسماعيلية,
       );
 
       _setValue(
         output,
         6,
         outputRow,
-        details['سويس'] ?? 0,
+        سويس,
       );
 
       _setValue(
         output,
         7,
         outputRow,
-        details['كارت ذكي'] ?? 0,
+        كارت,
       );
 
       _setValue(
         output,
         8,
         outputRow,
-        details['غاز'] ?? 0,
+        غاز,
       );
 
-      output
-          .cell(
-            CellIndex.indexByColumnRow(
-              columnIndex: 9,
-              rowIndex: outputRow,
-            ),
-          )
-          .value = FormulaCellValue(
-        'SUM(E$excelRow:I$excelRow)',
+      _setValue(
+        output,
+        9,
+        outputRow,
+        totalQuantity,
       );
 
       _setValue(
         output,
         10,
         outputRow,
-        _value(row, reportHeaders['عداد البداية']),
+        startOdometer,
       );
 
       _setValue(
         output,
         11,
         outputRow,
-        _value(row, reportHeaders['آخر عداد بالفترة']),
+        endOdometer,
       );
 
       _setValue(
         output,
         12,
         outputRow,
-        _value(row, reportHeaders['المسافة']),
+        distance,
       );
 
       _setValue(
         output,
         13,
         outputRow,
-        _value(row, reportHeaders['النسبة']),
+        actualPercentage,
       );
 
       _setValue(
         output,
         14,
         outputRow,
-        _value(row, reportHeaders['النسبة القياسية']),
+        standardPercentage,
       );
 
       _setValue(
         output,
         15,
         outputRow,
-        _value(row, reportHeaders['نسبة التجاوز']),
+        excessPercentage,
       );
 
       _setValue(
         output,
         16,
         outputRow,
-        _value(row, reportHeaders['الحالة']) ?? 'طبيعي',
+        status,
       );
 
       sequence++;
@@ -463,8 +511,14 @@ class _PercentageScreenState extends State<PercentageScreen> {
     List<Data?> row,
     int? index,
   ) {
-    final value = _value(row, index);
+    return _numberValueFromDynamic(
+      _value(row, index),
+    );
+  }
 
+  num _numberValueFromDynamic(
+    dynamic value,
+  ) {
     if (value == null) {
       return 0;
     }
@@ -474,7 +528,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
     }
 
     return num.tryParse(
-          value.toString().replaceAll(',', ''),
+          value.toString().replaceAll(',', '').trim(),
         ) ??
         0;
   }
@@ -572,11 +626,6 @@ class _PercentageScreenState extends State<PercentageScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _status,
-                      textAlign: TextAlign.center,
-                    ),
                     const SizedBox(height: 25),
                     if (_selectedFileName != null)
                       Text(
@@ -587,40 +636,30 @@ class _PercentageScreenState extends State<PercentageScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: _isProcessing ? null : _pickFile,
-                        icon: const Icon(Icons.upload_file),
-                        label: const Text('رفع ملف Excel'),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
                         onPressed:
-                            _isProcessing || _selectedBytes == null
-                                ? null
-                                : _processFile,
+                            _isProcessing ? null : _pickFile,
                         icon: _isProcessing
                             ? const SizedBox(
-                                width: 18,
-                                height: 18,
+                                width: 20,
+                                height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Icon(Icons.auto_fix_high),
+                            : const Icon(Icons.upload_file),
                         label: Text(
                           _isProcessing
                               ? 'جاري المعالجة...'
-                              : 'تنسيق وتجهيز الملف',
+                              : 'اختيار ملف Excel',
                         ),
                       ),
                     ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 20),
                     TextField(
                       controller: _fileNameController,
                       textDirection: TextDirection.rtl,
-                      enabled: _isReady && !_isProcessing,
+                      enabled:
+                          _preparedFile != null && !_isProcessing,
                       decoration: const InputDecoration(
                         labelText: 'اسم الملف',
                         hintText: 'اكتب اسم الملف',
@@ -631,6 +670,11 @@ class _PercentageScreenState extends State<PercentageScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    Text(
+                      _status,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
@@ -642,12 +686,6 @@ class _PercentageScreenState extends State<PercentageScreen> {
                         label: const Text('تصدير الملف'),
                       ),
                     ),
-                    if (_isReady) ...[
-                      const SizedBox(height: 15),
-                      const Text(
-                        'تم تجهيز الملف — يمكنك الآن تصديره',
-                      ),
-                    ],
                   ],
                 ),
               ),
