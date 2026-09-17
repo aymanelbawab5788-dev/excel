@@ -17,6 +17,8 @@ class ExcelFormatterApp extends StatelessWidget {
       title: 'منسق ملفات Excel',
       theme: ThemeData(
         useMaterial3: true,
+        colorSchemeSeed: Colors.blue,
+        scaffoldBackgroundColor: const Color(0xFFF6F8FB),
       ),
       home: const HomePage(),
     );
@@ -26,10 +28,26 @@ class ExcelFormatterApp extends StatelessWidget {
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  void _openSection(
-    BuildContext context,
-    String title,
-  ) {
+  static const List<_ExcelSection> sections = [
+    _ExcelSection(
+      title: 'كشف النسبة',
+      description: 'تحليل استهلاك السيارات وحساب النسب',
+      icon: Icons.percent_rounded,
+    ),
+    _ExcelSection(
+      title: 'حساب 530',
+      description: 'تفريغ مسحوبات الوقود وتجهيز التقرير',
+      icon: Icons.calculate_rounded,
+    ),
+    _ExcelSection(
+      title: 'الفواتير',
+      description: 'معالجة وتنسيق ملفات الفواتير',
+      icon: Icons.receipt_long_rounded,
+    ),
+    // أضف العمليات الجديدة هنا فقط لاحقًا.
+  ];
+
+  void _openSection(BuildContext context, String title) {
     if (title == 'كشف النسبة') {
       Navigator.push(
         context,
@@ -66,105 +84,86 @@ class HomePage extends StatelessWidget {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('منسق ملفات Excel'),
+          elevation: 0,
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
           centerTitle: true,
+          title: const Text(
+            'منسق ملفات Excel',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 21,
+            ),
+          ),
         ),
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 20),
-                const Text(
-                  'اختر العملية المطلوبة',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 30),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isWide = constraints.maxWidth >= 700;
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
 
-                      if (isWide) {
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: _ExcelActionCard(
-                                title: 'كشف النسبة',
-                                icon: Icons.percent,
-                                onTap: () => _openSection(
-                                  context,
-                                  'كشف النسبة',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _ExcelActionCard(
-                                title: 'حساب 530',
-                                icon: Icons.calculate_outlined,
-                                onTap: () => _openSection(
-                                  context,
-                                  'حساب 530',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _ExcelActionCard(
-                                title: 'الفواتير',
-                                icon: Icons.receipt_long_outlined,
-                                onTap: () => _openSection(
-                                  context,
-                                  'الفواتير',
-                                ),
-                              ),
-                            ),
-                          ],
+              final crossAxisCount = width < 600
+                  ? 2
+                  : width < 1000
+                      ? 3
+                      : 4;
+
+              final horizontalPadding = width < 600 ? 16.0 : 28.0;
+
+              return SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  24,
+                  horizontalPadding,
+                  32,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'اختر العملية المطلوبة',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'اختر أداة Excel التي تريد استخدامها',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: sections.length,
+                      gridDelegate:
+                          SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: width < 600 ? 1.05 : 1.25,
+                      ),
+                      itemBuilder: (context, index) {
+                        final section = sections[index];
+
+                        return _ExcelActionCard(
+                          section: section,
+                          onTap: () => _openSection(
+                            context,
+                            section.title,
+                          ),
                         );
-                      }
-
-                      return ListView(
-                        children: [
-                          _ExcelActionCard(
-                            title: 'كشف النسبة',
-                            icon: Icons.percent,
-                            onTap: () => _openSection(
-                              context,
-                              'كشف النسبة',
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _ExcelActionCard(
-                            title: 'حساب 530',
-                            icon: Icons.calculate_outlined,
-                            onTap: () => _openSection(
-                              context,
-                              'حساب 530',
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _ExcelActionCard(
-                            title: 'الفواتير',
-                            icon: Icons.receipt_long_outlined,
-                            onTap: () => _openSection(
-                              context,
-                              'الفواتير',
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                      },
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -172,40 +171,78 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class _ExcelActionCard extends StatelessWidget {
-  const _ExcelActionCard({
+class _ExcelSection {
+  const _ExcelSection({
     required this.title,
+    required this.description,
     required this.icon,
-    required this.onTap,
   });
 
   final String title;
+  final String description;
   final IconData icon;
+}
+
+class _ExcelActionCard extends StatelessWidget {
+  const _ExcelActionCard({
+    required this.section,
+    required this.onTap,
+  });
+
+  final _ExcelSection section;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: 1,
+      shadowColor: Colors.black12,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: Colors.grey.shade200,
+        ),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(18),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 50,
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  section.icon,
+                  size: 30,
+                  color: Colors.blue,
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               Text(
-                title,
+                section.title,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: 17,
                   fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                section.description,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: Colors.grey.shade600,
                 ),
               ),
             ],
@@ -226,15 +263,19 @@ class TemporarySectionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-      ),
-      body: Center(
-        child: Text(
-          'قسم $title سيتم تنفيذه لاحقًا',
-          style: const TextStyle(
-            fontSize: 20,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Text(
+            'قسم $title سيتم تنفيذه لاحقًا',
+            style: const TextStyle(
+              fontSize: 20,
+            ),
           ),
         ),
       ),
