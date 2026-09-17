@@ -70,12 +70,13 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       // مش بتتسجل صح في جدول الـ fills جوه styles.xml فتضيع لما إكسل
       // يفتح الملف، بعكس الألوان الجاهزة اللي مسجّلة بأمان في المكتبة.
       final colorWhite = ex.ExcelColor.white;
-      final colorRed = ex.ExcelColor.red900;
+      final colorTotalText = ex.ExcelColor.black;
       final colorTitleBg = ex.ExcelColor.blueGrey900;
       final colorHeaderBg = ex.ExcelColor.blue700;
-      final colorTotalBg = ex.ExcelColor.orange100;
+      final colorTotalBg = ex.ExcelColor.grey300;
       final colorBorderMedium = ex.ExcelColor.grey600;
       final colorBorderThin = ex.ExcelColor.grey400;
+      final colorBorderOuter = ex.ExcelColor.black;
 
       final thinBorder = ex.Border(
         borderStyle: ex.BorderStyle.Thin,
@@ -87,9 +88,17 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         borderColorHex: colorBorderMedium,
       );
 
+      // حد خارجي أثقل هيتطبّق على محيط الجدول كله بعد ما نخلص كتابة
+      // كل البيانات، عشان يبان الجدول كصندوق واحد متكامل زي التقارير
+      // الرسمية، وخطوط الشبكة الداخلية تفضل أرفع وواضحة.
+      final outerBorder = ex.Border(
+        borderStyle: ex.BorderStyle.Medium,
+        borderColorHex: colorBorderOuter,
+      );
+
       final titleStyle = ex.CellStyle(
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
-        fontSize: 18,
+        fontSize: 16,
         bold: true,
         fontColorHex: colorWhite,
         backgroundColorHex: colorTitleBg,
@@ -103,7 +112,7 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
 
       final headerStyle = ex.CellStyle(
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
-        fontSize: 12,
+        fontSize: 11,
         bold: true,
         fontColorHex: colorWhite,
         backgroundColorHex: colorHeaderBg,
@@ -142,9 +151,9 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
 
       final totalStyle = ex.CellStyle(
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
-        fontSize: 12,
+        fontSize: 11,
         bold: true,
-        fontColorHex: colorRed,
+        fontColorHex: colorTotalText,
         backgroundColorHex: colorTotalBg,
         horizontalAlign: ex.HorizontalAlign.Center,
         verticalAlign: ex.VerticalAlign.Center,
@@ -156,10 +165,10 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
 
       final totalLabelStyle = ex.CellStyle(
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
-        fontSize: 12,
+        fontSize: 11,
         bold: true,
         italic: true,
-        fontColorHex: colorRed,
+        fontColorHex: colorTotalText,
         backgroundColorHex: colorTotalBg,
         horizontalAlign: ex.HorizontalAlign.Center,
         verticalAlign: ex.VerticalAlign.Center,
@@ -171,9 +180,9 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
 
       final totalNumericStyle = ex.CellStyle(
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
-        fontSize: 12,
+        fontSize: 11,
         bold: true,
-        fontColorHex: colorRed,
+        fontColorHex: colorTotalText,
         backgroundColorHex: colorTotalBg,
         horizontalAlign: ex.HorizontalAlign.Center,
         verticalAlign: ex.VerticalAlign.Center,
@@ -229,7 +238,7 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         titleStyle,
       );
 
-      sheet.setRowHeight(0, 34);
+      sheet.setRowHeight(0, 26);
 
       // =========================
       // رؤوس الأعمدة
@@ -246,7 +255,7 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         );
       }
 
-      sheet.setRowHeight(1, 26);
+      sheet.setRowHeight(1, 20);
 
       // الأعمدة الرقمية (العداد، اللترات، النسبة الفعلية) تُعرض بتنسيق عشري
       const numericColumns = {4, 5, 6};
@@ -351,7 +360,7 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
             );
           }
 
-          sheet.setRowHeight(rowNumber, 20);
+          sheet.setRowHeight(rowNumber, 16);
           rowNumber++;
         }
 
@@ -421,10 +430,47 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
           cellStyle: totalNumericStyle,
         );
 
-        sheet.setRowHeight(rowNumber, 28);
+        sheet.setRowHeight(rowNumber, 20);
 
         rowNumber++;
         serial++;
+      }
+
+      // =========================
+      // حد خارجي حول الجدول كله (تنسيق فقط)
+      // =========================
+      // بنمرّ على خلايا محيط الجدول بس (أول/آخر صف وأول/آخر عمود)
+      // ونعدّل حد الجهة الخارجية لكل خلية منها لتكون أغلظ، من غير ما
+      // نلمس القيمة المكتوبة جوه الخلية ولا باقي حدودها الداخلية.
+      final firstBodyRow = 0;
+      final lastBodyRow = rowNumber - 1;
+      const firstBodyCol = 0;
+      const lastBodyCol = 7;
+
+      for (int r = firstBodyRow; r <= lastBodyRow; r++) {
+        for (int c = firstBodyCol; c <= lastBodyCol; c++) {
+          final onEdge = r == firstBodyRow ||
+              r == lastBodyRow ||
+              c == firstBodyCol ||
+              c == lastBodyCol;
+
+          if (!onEdge) continue;
+
+          final cellIndex = ex.CellIndex.indexByColumnRow(
+            columnIndex: c,
+            rowIndex: r,
+          );
+
+          final existingStyle = sheet.cell(cellIndex).cellStyle;
+          if (existingStyle == null) continue;
+
+          if (r == firstBodyRow) existingStyle.topBorder = outerBorder;
+          if (r == lastBodyRow) existingStyle.bottomBorder = outerBorder;
+          if (c == firstBodyCol) existingStyle.leftBorder = outerBorder;
+          if (c == lastBodyCol) existingStyle.rightBorder = outerBorder;
+
+          sheet.cell(cellIndex).cellStyle = existingStyle;
+        }
       }
 
       // =========================
