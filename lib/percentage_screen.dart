@@ -23,19 +23,20 @@ class _PercentageScreenState extends State<PercentageScreen> {
 
   Future<void> _pickFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['xlsx'],
-        withData: true,
       );
 
-      if (result == null || result.files.single.bytes == null) {
+      if (file == null) {
         return;
       }
 
+      final bytes = await file.readAsBytes();
+
       setState(() {
-        _selectedBytes = result.files.single.bytes;
-        _selectedFileName = result.files.single.name;
+        _selectedBytes = bytes;
+        _selectedFileName = file.name;
         _isReady = false;
         _status = 'تم اختيار الملف، جاهز للمعالجة';
       });
@@ -153,9 +154,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
 
       result[vehicle] = {
         'بورسعيد': _numberValue(
-          row,
-          headers['محطة بورسعيد'],
-        ) +
+              row,
+              headers['محطة بورسعيد'],
+            ) +
             _numberValue(
               row,
               headers['محطة بورفؤاد'],
@@ -487,7 +488,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
 
     final url = html.Url.createObjectUrlFromBlob(blob);
 
-    final anchor = html.AnchorElement(href: url)
+    html.AnchorElement(href: url)
       ..setAttribute('download', fileName)
       ..click();
 
@@ -549,8 +550,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed:
-                          _isProcessing ? null : _pickFile,
+                      onPressed: _isProcessing ? null : _pickFile,
                       icon: const Icon(Icons.upload_file),
                       label: const Text('رفع ملف Excel'),
                     ),
