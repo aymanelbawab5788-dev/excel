@@ -1,51 +1,318 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:universal_html/html.dart' as html;
-import 'excel_processor.dart';
 
-void main() => runApp(const SmartExcelApp());
-
-class SmartExcelApp extends StatelessWidget {
-  const SmartExcelApp({super.key});
-  @override
-  Widget build(BuildContext context) => MaterialApp(title: 'منسق Excel الذكي', debugShowCheckedModeBanner: false, theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff0f766e)), scaffoldBackgroundColor: const Color(0xfff4f7f5), fontFamily: 'Arial', useMaterial3: true), home: const HomePage());
+void main() {
+  runApp(const ExcelFormatterApp());
 }
 
-class HomePage extends StatefulWidget {
+class ExcelFormatterApp extends StatelessWidget {
+  const ExcelFormatterApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'منسق ملفات Excel',
+      theme: ThemeData(
+        useMaterial3: true,
+        fontFamily: 'Arial',
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xff0f766e),
+        ),
+        scaffoldBackgroundColor: const Color(0xfff5f7f7),
+      ),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
+
   @override
-  State<HomePage> createState() => _HomePageState();
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'منسق ملفات Excel',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 900,
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+
+                  const Icon(
+                    Icons.table_chart_rounded,
+                    size: 64,
+                    color: Color(0xff0f766e),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  const Text(
+                    'منسق ملفات Excel',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xff173b39),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    'اختر نوع الملف الذي تريد تجهيزه',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Color(0xff657472),
+                    ),
+                  ),
+
+                  const SizedBox(height: 36),
+
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth >= 700;
+
+                      if (isWide) {
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: _ExcelActionCard(
+                                icon: Icons.analytics_rounded,
+                                title: 'كشف النسبة',
+                                subtitle: 'تنسيق وتجهيز كشف النسبة',
+                                onTap: () {
+                                  _openSection(
+                                    context,
+                                    'كشف النسبة',
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _ExcelActionCard(
+                                icon: Icons.calculate_rounded,
+                                title: 'حساب 530',
+                                subtitle: 'حساب وتجهيز ملف 530',
+                                onTap: () {
+                                  _openSection(
+                                    context,
+                                    'حساب 530',
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _ExcelActionCard(
+                                icon: Icons.receipt_long_rounded,
+                                title: 'الفواتير',
+                                subtitle: 'تنسيق وتجهيز ملفات الفواتير',
+                                onTap: () {
+                                  _openSection(
+                                    context,
+                                    'الفواتير',
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Column(
+                        children: [
+                          _ExcelActionCard(
+                            icon: Icons.analytics_rounded,
+                            title: 'كشف النسبة',
+                            subtitle: 'تنسيق وتجهيز كشف النسبة',
+                            onTap: () {
+                              _openSection(
+                                context,
+                                'كشف النسبة',
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          _ExcelActionCard(
+                            icon: Icons.calculate_rounded,
+                            title: 'حساب 530',
+                            subtitle: 'حساب وتجهيز ملف 530',
+                            onTap: () {
+                              _openSection(
+                                context,
+                                'حساب 530',
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          _ExcelActionCard(
+                            icon: Icons.receipt_long_rounded,
+                            title: 'الفواتير',
+                            subtitle: 'تنسيق وتجهيز ملفات الفواتير',
+                            onTap: () {
+                              _openSection(
+                                context,
+                                'الفواتير',
+                              );
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 36),
+
+                  const Text(
+                    'يتم تجهيز الملفات محليًا على جهازك',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xff7a8785),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openSection(BuildContext context, String title) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TemporarySectionPage(
+          title: title,
+        ),
+      ),
+    );
+  }
 }
 
-class _HomePageState extends State<HomePage> {
-  ExcelFileInfo? reference; ExcelFileInfo? data; String status = 'في انتظار الملفات'; bool busy = false;
-  Future<void> pick(bool isReference) async {
-    final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx', 'xls']);
-    if (result.isEmpty) return;
-    final file = ExcelFileInfo(name: result.first.name, bytes: await result.first.readAsBytes());
-    setState(() { if (isReference) { reference = file; status = 'تم اختيار الملف المرجعي'; } else { data = file; status = 'تم اختيار ملف البيانات الجديدة'; } });
-  }
-  Future<void> process() async {
-    if (reference == null || data == null) { setState(() => status = 'يرجى اختيار الملفين أولًا.'); return; }
-    setState(() { busy = true; status = 'جاري تحليل الملف المرجعي'; });
-    try {
-      final report = ExcelProcessor().process(referenceBytes: reference!.bytes, dataBytes: data!.bytes, sourceName: data!.name, onStatus: (value) => setState(() => status = value));
-      final blob = html.Blob([report.bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); final url = html.Url.createObjectUrlFromBlob(blob);
-      html.AnchorElement(href: url)..setAttribute('download', report.fileName)..click(); html.Url.revokeObjectUrl(url); setState(() => status = 'تم الانتهاء بنجاح: ${report.summary}');
-    } catch (error) { setState(() => status = 'حدث خطأ: ${error.toString().replaceFirst('FormatException: ', '')}'); } finally { setState(() => busy = false); }
-  }
+class _ExcelActionCard extends StatelessWidget {
+  const _ExcelActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
   @override
-  Widget build(BuildContext context) => Scaffold(body: Directionality(textDirection: TextDirection.rtl, child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 760), child: SingleChildScrollView(padding: const EdgeInsets.all(28), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    const Text('منسق Excel الذكي', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Color(0xff123b3a))), const SizedBox(height: 8), const Text('طبّق بنية ملفك المرجعي على بيانات جديدة، محليًا وبخصوصية كاملة.', style: TextStyle(fontSize: 16, color: Color(0xff526563))), const SizedBox(height: 28),
-    FileCard(title: 'الملف المرجعي', button: 'اختيار الملف المرجعي', file: reference, onPick: () => pick(true)), const SizedBox(height: 14), FileCard(title: 'ملف البيانات الجديدة', button: 'اختيار ملف البيانات الجديدة', file: data, onPick: () => pick(false)), const SizedBox(height: 22),
-    FilledButton.icon(onPressed: busy ? null : process, icon: const Icon(Icons.auto_fix_high), label: const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Text('معالجة Excel', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)))), const SizedBox(height: 18),
-    Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xffd8e3df)), borderRadius: BorderRadius.circular(12)), child: Row(children: [Icon(busy ? Icons.sync : Icons.info_outline, color: const Color(0xff0f766e)), const SizedBox(width: 12), Expanded(child: Text(status, style: const TextStyle(color: Color(0xff26413f))))])), const SizedBox(height: 20), const Text('المعالجة تتم داخل المتصفح ولا يتم رفع ملفاتك إلى أي خادم.', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Color(0xff71817e))),
-  ]))))));
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xffdce5e3),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: const Color(0xffe4f2ef),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  icon,
+                  size: 34,
+                  color: const Color(0xff0f766e),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xff173b39),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xff71817e),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Icon(
+                Icons.arrow_back_rounded,
+                size: 22,
+                color: Color(0xff0f766e),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class FileCard extends StatelessWidget {
-  const FileCard({super.key, required this.title, required this.button, required this.file, required this.onPick});
-  final String title; final String button; final ExcelFileInfo? file; final VoidCallback onPick;
+class TemporarySectionPage extends StatelessWidget {
+  const TemporarySectionPage({
+    super.key,
+    required this.title,
+  });
+
+  final String title;
+
   @override
-  Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xffd8e3df))), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)), const SizedBox(height: 12), OutlinedButton.icon(onPressed: onPick, icon: const Icon(Icons.upload_file), label: Text(button)), if (file != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text('${file!.name}  •  ${file!.sizeLabel}', style: const TextStyle(color: Color(0xff0f766e))))]));
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+        ),
+        body: Center(
+          child: Text(
+            'صفحة $title',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
