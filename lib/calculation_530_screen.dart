@@ -75,14 +75,13 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
     for (int r = 1; r < reportSheet.maxRows; r++) {
       final carNumValue = _cellValue(reportSheet, r, 0);
 
-      if (carNumValue == null || carNumValue.toString().trim().isEmpty) {
+      if (carNumValue == null ||
+          carNumValue.toString().trim().isEmpty) {
         continue;
       }
 
-      final carNum = _formatCarNumber(carNumValue);
-
       rawRows.add({
-        'car_num': carNum,
+        'car_num': _formatCarNumber(carNumValue),
         'car_letters': _cellString(reportSheet, r, 1),
         'station': _cellString(reportSheet, r, 2).trim(),
         'date': _cellString(reportSheet, r, 3),
@@ -128,6 +127,152 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
 
     final sheet = outputExcel['سولار شهر 8'];
 
+    sheet.isRTL = true;
+
+    // ------------------------------------------------------------
+    // الألوان
+    // ------------------------------------------------------------
+
+    const black = 'FF000000';
+    const darkBlue = 'FF002060';
+    const red = 'FFFF0000';
+    const gray = 'FFD9D9D9';
+    const lightGray = 'FFF2F2F2';
+    const white = 'FFFFFFFF';
+
+    // ------------------------------------------------------------
+    // الحدود
+    // ------------------------------------------------------------
+
+    final thinBorder = Border(
+      borderStyle: BorderStyle.Thin,
+      borderColorHex: 'FF000000',
+    );
+
+    final mediumBorder = Border(
+      borderStyle: BorderStyle.Medium,
+      borderColorHex: 'FF000000',
+    );
+
+    // ------------------------------------------------------------
+    // الأنماط
+    // ------------------------------------------------------------
+
+    final titleStyle = CellStyle(
+      fontFamily: getFontFamily(FontFamily.Andalus),
+      fontSize: 16,
+      bold: true,
+      fontColorHex: black,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+    );
+
+    final headerStyle = CellStyle(
+      fontFamily: getFontFamily(FontFamily.Arial),
+      fontSize: 12,
+      bold: true,
+      fontColorHex: black,
+      backgroundColorHex: gray,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      leftBorder: thinBorder,
+      rightBorder: thinBorder,
+      topBorder: thinBorder,
+      bottomBorder: thinBorder,
+    );
+
+    final dataStyle = CellStyle(
+      fontFamily: getFontFamily(FontFamily.Arial),
+      fontSize: 11,
+      bold: true,
+      fontColorHex: black,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      leftBorder: thinBorder,
+      rightBorder: thinBorder,
+      topBorder: thinBorder,
+      bottomBorder: thinBorder,
+    );
+
+    final blackStationStyle = CellStyle(
+      fontFamily: getFontFamily(FontFamily.Arial),
+      fontSize: 11,
+      bold: true,
+      fontColorHex: black,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      leftBorder: thinBorder,
+      rightBorder: thinBorder,
+      topBorder: thinBorder,
+      bottomBorder: thinBorder,
+    );
+
+    final blueStationStyle = CellStyle(
+      fontFamily: getFontFamily(FontFamily.Arial),
+      fontSize: 11,
+      bold: true,
+      fontColorHex: darkBlue,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      leftBorder: thinBorder,
+      rightBorder: thinBorder,
+      topBorder: thinBorder,
+      bottomBorder: thinBorder,
+    );
+
+    final sumRowStyle = CellStyle(
+      fontFamily: getFontFamily(FontFamily.Arial),
+      fontSize: 11,
+      bold: true,
+      fontColorHex: black,
+      backgroundColorHex: lightGray,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      leftBorder: thinBorder,
+      rightBorder: thinBorder,
+      topBorder: thinBorder,
+      bottomBorder: thinBorder,
+    );
+
+    final sumValueStyle = CellStyle(
+      fontFamily: getFontFamily(FontFamily.Arial),
+      fontSize: 12,
+      bold: true,
+      fontColorHex: red,
+      backgroundColorHex: lightGray,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      leftBorder: thinBorder,
+      rightBorder: thinBorder,
+      topBorder: thinBorder,
+      bottomBorder: thinBorder,
+    );
+
+    // ------------------------------------------------------------
+    // العنوان
+    // ------------------------------------------------------------
+
+    sheet.merge(
+      CellIndex.indexByString('A1'),
+      CellIndex.indexByString('H1'),
+    );
+
+    sheet.cell(
+      CellIndex.indexByString('A1'),
+    ).value = TextCellValue(
+      'مسحوبات سولار شهر اغسطس 2026 الفترة من 1/8/2026 الي 31/8/2026',
+    );
+
+    sheet.cell(
+      CellIndex.indexByString('A1'),
+    ).cellStyle = titleStyle;
+
+    sheet.setRowHeight(0, 30);
+
+    // ------------------------------------------------------------
+    // عناوين الأعمدة
+    // ------------------------------------------------------------
+
     const headers = [
       'م',
       'رقم السيارة',
@@ -140,13 +285,22 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
     ];
 
     for (int col = 0; col < headers.length; col++) {
-      sheet
-          .cell(CellIndex.indexByColumnRow(
-            columnIndex: col,
-            rowIndex: 1,
-          ))
-          .value = TextCellValue(headers[col]);
+      final cell = sheet.cell(
+        CellIndex.indexByColumnRow(
+          columnIndex: col,
+          rowIndex: 1,
+        ),
+      );
+
+      cell.value = TextCellValue(headers[col]);
+      cell.cellStyle = headerStyle;
     }
+
+    sheet.setRowHeight(1, 24);
+
+    // ------------------------------------------------------------
+    // البيانات
+    // ------------------------------------------------------------
 
     int currentRow = 2;
 
@@ -158,7 +312,7 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       final startRow = currentRow;
 
       for (final record in group) {
-        final values = [
+        final rowValues = [
           '',
           record['car_num'],
           record['car_letters'],
@@ -169,7 +323,15 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
           record['pct'],
         ];
 
-        for (int col = 0; col < values.length; col++) {
+        final isBlackStation = [
+          'بورسعيد',
+          'بورفؤاد',
+        ].any(
+          (station) =>
+              record['station'].toString().contains(station),
+        );
+
+        for (int col = 0; col < rowValues.length; col++) {
           final cell = sheet.cell(
             CellIndex.indexByColumnRow(
               columnIndex: col,
@@ -177,30 +339,92 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
             ),
           );
 
-          final value = values[col];
+          final value = rowValues[col];
 
           if (value is num) {
-            cell.value = DoubleCellValue(value.toDouble());
+            cell.value = DoubleCellValue(
+              value.toDouble(),
+            );
           } else {
-            cell.value = TextCellValue(value?.toString() ?? '');
+            cell.value = TextCellValue(
+              value?.toString() ?? '',
+            );
+          }
+
+          if (col == 3) {
+            cell.cellStyle = isBlackStation
+                ? blackStationStyle
+                : blueStationStyle;
+          } else {
+            cell.cellStyle = dataStyle;
           }
         }
+
+        sheet.setRowHeight(currentRow, 18);
 
         currentRow++;
       }
 
       final endDataRow = currentRow - 1;
 
-      final serialCell = sheet.cell(
-        CellIndex.indexByColumnRow(
-          columnIndex: 0,
-          rowIndex: startRow,
-        ),
+      // ----------------------------------------------------------
+      // المسلسل المدمج
+      // ----------------------------------------------------------
+
+      final serialStart = CellIndex.indexByColumnRow(
+        columnIndex: 0,
+        rowIndex: startRow,
       );
 
-      serialCell.value =
-          IntCellValue(groupIndex + 1);
+      final serialEnd = CellIndex.indexByColumnRow(
+        columnIndex: 0,
+        rowIndex: endDataRow,
+      );
 
+      if (startRow == endDataRow) {
+        sheet.cell(serialStart).value =
+            IntCellValue(groupIndex + 1);
+
+        sheet.cell(serialStart).cellStyle = dataStyle;
+      } else {
+        sheet.merge(
+          serialStart,
+          serialEnd,
+        );
+
+        sheet.cell(serialStart).value =
+            IntCellValue(groupIndex + 1);
+
+        sheet.setMergedCellStyle(
+          serialStart,
+          dataStyle,
+        );
+      }
+
+      // ----------------------------------------------------------
+      // صف المجموع
+      // ----------------------------------------------------------
+
+      for (int col = 0; col < 8; col++) {
+        final cell = sheet.cell(
+          CellIndex.indexByColumnRow(
+            columnIndex: col,
+            rowIndex: currentRow,
+          ),
+        );
+
+        cell.cellStyle = sumRowStyle;
+      }
+
+      // الرقم 0 في عمود رقم السيارة
+      sheet.cell(
+        CellIndex.indexByColumnRow(
+          columnIndex: 1,
+          rowIndex: currentRow,
+        ),
+      ).value = IntCellValue(0);
+
+      // معادلة مجموع اللترات
       final sumCell = sheet.cell(
         CellIndex.indexByColumnRow(
           columnIndex: 6,
@@ -212,8 +436,61 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         'SUM(G${startRow + 1}:G${endDataRow + 1})',
       );
 
+      sumCell.cellStyle = sumValueStyle;
+
+      sheet.setRowHeight(currentRow, 20);
+
       currentRow++;
     }
+
+    // ------------------------------------------------------------
+    // الإطار الخارجي العريض
+    // ------------------------------------------------------------
+
+    final maxRow = currentRow - 1;
+
+    for (int row = 1; row <= maxRow; row++) {
+      for (int col = 0; col < 8; col++) {
+        final cell = sheet.cell(
+          CellIndex.indexByColumnRow(
+            columnIndex: col,
+            rowIndex: row,
+          ),
+        );
+
+        final oldStyle = cell.cellStyle;
+
+        cell.cellStyle = oldStyle.copyWith(
+          leftBorderVal:
+              col == 0 ? mediumBorder : oldStyle.leftBorder,
+          rightBorderVal:
+              col == 7 ? mediumBorder : oldStyle.rightBorder,
+          topBorderVal:
+              row == 1 ? mediumBorder : oldStyle.topBorder,
+          bottomBorderVal:
+              row == maxRow
+                  ? mediumBorder
+                  : oldStyle.bottomBorder,
+        );
+      }
+    }
+
+    // ------------------------------------------------------------
+    // عرض الأعمدة
+    // ------------------------------------------------------------
+
+    sheet.setColumnWidth(0, 7);
+    sheet.setColumnWidth(1, 15);
+    sheet.setColumnWidth(2, 12);
+    sheet.setColumnWidth(3, 24);
+    sheet.setColumnWidth(4, 16);
+    sheet.setColumnWidth(5, 14);
+    sheet.setColumnWidth(6, 12);
+    sheet.setColumnWidth(7, 17);
+
+    // ------------------------------------------------------------
+    // حفظ الملف
+    // ------------------------------------------------------------
 
     final encoded = outputExcel.encode();
 
@@ -229,20 +506,14 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
     int row,
     int column,
   ) {
-    final cell = sheet.cell(
-      CellIndex.indexByColumnRow(
-        columnIndex: column,
-        rowIndex: row,
-      ),
-    );
-
-    final value = cell.value;
-
-    if (value == null) {
-      return null;
-    }
-
-    return value;
+    return sheet
+        .cell(
+          CellIndex.indexByColumnRow(
+            columnIndex: column,
+            rowIndex: row,
+          ),
+        )
+        .value;
   }
 
   String _cellString(
@@ -250,7 +521,11 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
     int row,
     int column,
   ) {
-    final value = _cellValue(sheet, row, column);
+    final value = _cellValue(
+      sheet,
+      row,
+      column,
+    );
 
     if (value == null) {
       return '';
@@ -264,7 +539,11 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
     int row,
     int column,
   ) {
-    final value = _cellValue(sheet, row, column);
+    final value = _cellValue(
+      sheet,
+      row,
+      column,
+    );
 
     if (value == null) {
       return 0;
@@ -278,7 +557,9 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       return value.value;
     }
 
-    final parsed = double.tryParse(value.toString());
+    final parsed = double.tryParse(
+      value.toString(),
+    );
 
     return parsed ?? 0;
   }
@@ -322,8 +603,8 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
     final url = html.Url.createObjectUrlFromBlob(blob);
 
     html.AnchorElement(href: url)
-  ..setAttribute('download', fileName)
-  ..click();
+      ..setAttribute('download', fileName)
+      ..click();
 
     html.Url.revokeObjectUrl(url);
   }
