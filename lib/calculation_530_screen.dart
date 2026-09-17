@@ -480,8 +480,13 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       // =========================
       // تجهيز الملف بدون تحميل
       // =========================
-
-      final outputBytes = outputExcel.save();
+      // ملاحظة مهمة: save() في مكتبة excel بتستدعي جوّاها دايمًا
+      // SavingHelper.saveFile() (بتاعة الويب) حتى لو معملناش pass
+      // لـ fileName — وهي دي اللي بتعمل تحميل تلقائي فورًا في المتصفح.
+      // encode() بترجّع نفس البايتات بالظبط من غير ما تستدعي أي حاجة
+      // خاصة بالتحميل، فمفيش تحميل إلا لما إحنا نستدعي _downloadFile()
+      // بنفسنا (زر "تصدير الملف").
+      final outputBytes = outputExcel.encode();
 
       if (outputBytes == null) {
         throw Exception('فشل إنشاء ملف Excel');
