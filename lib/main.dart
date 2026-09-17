@@ -133,3 +133,100 @@ class HomePage extends StatelessWidget {
                           _ExcelActionCard(
                             title: 'حساب 530',
                             icon: Icons.calculate_outlined,
+                            onTap: () => _openSection(
+                              context,
+                              'حساب 530',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _ExcelActionCard(
+                            title: 'الفواتير',
+                            icon: Icons.receipt_long_outlined,
+                            onTap: () => _openSection(
+                              context,
+                              'الفواتير',
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExcelActionCard extends StatelessWidget {
+  const _ExcelActionCard({
+    required this.title,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 50,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class TemporarySectionPage extends StatelessWidget {
+  const TemporarySectionPage({
+    super.key,
+    required this.title,
+  });
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+      ),
+      body: Center(
+        child: Text(
+          'قسم $title سيتم تنفيذه لاحقًا',
+          style: const TextStyle(
+            fontSize: 20,
+          ),
+        ),
+      ),
+    );
+  }
+}
