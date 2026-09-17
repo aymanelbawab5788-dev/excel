@@ -658,7 +658,3 @@ class _PercentageScreenState extends State<PercentageScreen> {
     );
   }
 }
-
-كده النسبة بقت بنفس نظام 530، وأهم حاجة إن "output.encode()" بيجهز الـ bytes فقط، والتصدير الوحيد موجود في "_exportFile()".
-
-ولو عايز اسم الملف الافتراضي يبقى مثلًا "كشف_النسبة" بدل "كشف نسبة" أغيرهولك بسهولة.
