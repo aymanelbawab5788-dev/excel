@@ -333,7 +333,6 @@ class _PercentageScreenState extends State<PercentageScreen> {
       final status =
           excessPercentage > 0 ? 'متجاوز' : 'طبيعي';
 
-      final excelRow = outputRow + 1;
 
       output
           .cell(
