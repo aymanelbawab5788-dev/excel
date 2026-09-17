@@ -16,6 +16,11 @@ class _PercentageScreenState extends State<PercentageScreen> {
   Uint8List? _selectedBytes;
   String? _selectedFileName;
 
+  Uint8List? _preparedFile;
+
+  final TextEditingController _fileNameController =
+      TextEditingController(text: 'كشف نسبة');
+
   bool _isProcessing = false;
   bool _isReady = false;
 
@@ -37,6 +42,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
       setState(() {
         _selectedBytes = bytes;
         _selectedFileName = file.name;
+        _preparedFile = null;
         _isReady = false;
         _status = 'تم اختيار الملف، جاهز للمعالجة';
       });
@@ -54,6 +60,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
     setState(() {
       _isProcessing = true;
       _isReady = false;
+      _preparedFile = null;
       _status = 'جاري تجهيز كشف النسبة...';
     });
 
@@ -81,11 +88,6 @@ class _PercentageScreenState extends State<PercentageScreen> {
         detailsMap,
       );
 
-      setState(() {
-        _isReady = true;
-        _status = 'تم تجهيز كشف النسبة بنجاح';
-      });
-
       final encoded = output.encode();
 
       if (encoded == null) {
@@ -94,13 +96,16 @@ class _PercentageScreenState extends State<PercentageScreen> {
         );
       }
 
-      _downloadFile(
-        Uint8List.fromList(encoded),
-        'كشف نسبة.xlsx',
-      );
+      setState(() {
+        _preparedFile = Uint8List.fromList(encoded);
+        _isReady = true;
+        _status = 'تم تجهيز كشف النسبة بنجاح — اضغط تصدير الملف';
+      });
     } catch (e) {
       setState(() {
         _status = 'حدث خطأ أثناء المعالجة';
+        _preparedFile = null;
+        _isReady = false;
       });
 
       _showError('تعذر معالجة الملف:\n$e');
@@ -111,6 +116,31 @@ class _PercentageScreenState extends State<PercentageScreen> {
         });
       }
     }
+  }
+
+  void _exportFile() {
+    if (_preparedFile == null) {
+      return;
+    }
+
+    String fileName = _fileNameController.text.trim();
+
+    if (fileName.isEmpty) {
+      fileName = 'كشف نسبة';
+    }
+
+    if (!fileName.toLowerCase().endsWith('.xlsx')) {
+      fileName = '$fileName.xlsx';
+    }
+
+    _downloadFile(
+      _preparedFile!,
+      fileName,
+    );
+
+    setState(() {
+      _status = 'تم تصدير الملف بنجاح';
+    });
   }
 
   Map<String, Map<String, dynamic>> _buildDetailsMap(
@@ -506,6 +536,12 @@ class _PercentageScreenState extends State<PercentageScreen> {
   }
 
   @override
+  void dispose() {
+    _fileNameController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -520,71 +556,100 @@ class _PercentageScreenState extends State<PercentageScreen> {
             ),
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.table_chart_outlined,
-                    size: 70,
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'كشف النسبة',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.table_chart_outlined,
+                      size: 70,
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _status,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 25),
-                  if (_selectedFileName != null)
-                    Text(
-                      _selectedFileName!,
-                      textAlign: TextAlign.center,
-                    ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isProcessing ? null : _pickFile,
-                      icon: const Icon(Icons.upload_file),
-                      label: const Text('رفع ملف Excel'),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isProcessing || _selectedBytes == null
-                          ? null
-                          : _processFile,
-                      icon: _isProcessing
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(Icons.auto_fix_high),
-                      label: Text(
-                        _isProcessing
-                            ? 'جاري المعالجة...'
-                            : 'تنسيق وتصدير',
+                    const SizedBox(height: 20),
+                    const Text(
+                      'كشف النسبة',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                  if (_isReady) ...[
-                    const SizedBox(height: 15),
-                    const Text(
-                      'تم إنشاء الملف وتصديره.',
+                    const SizedBox(height: 10),
+                    Text(
+                      _status,
+                      textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: 25),
+                    if (_selectedFileName != null)
+                      Text(
+                        _selectedFileName!,
+                        textAlign: TextAlign.center,
+                      ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _isProcessing ? null : _pickFile,
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('رفع ملف Excel'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed:
+                            _isProcessing || _selectedBytes == null
+                                ? null
+                                : _processFile,
+                        icon: _isProcessing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.auto_fix_high),
+                        label: Text(
+                          _isProcessing
+                              ? 'جاري المعالجة...'
+                              : 'تنسيق وتجهيز الملف',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    TextField(
+                      controller: _fileNameController,
+                      textDirection: TextDirection.rtl,
+                      enabled: _isReady && !_isProcessing,
+                      decoration: const InputDecoration(
+                        labelText: 'اسم الملف',
+                        hintText: 'اكتب اسم الملف',
+                        prefixIcon: Icon(
+                          Icons.drive_file_rename_outline,
+                        ),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed:
+                            _preparedFile == null || _isProcessing
+                                ? null
+                                : _exportFile,
+                        icon: const Icon(Icons.download),
+                        label: const Text('تصدير الملف'),
+                      ),
+                    ),
+                    if (_isReady) ...[
+                      const SizedBox(height: 15),
+                      const Text(
+                        'تم تجهيز الملف — يمكنك الآن تصديره',
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -593,3 +658,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
     );
   }
 }
+
+كده النسبة بقت بنفس نظام 530، وأهم حاجة إن "output.encode()" بيجهز الـ bytes فقط، والتصدير الوحيد موجود في "_exportFile()".
+
+ولو عايز اسم الملف الافتراضي يبقى مثلًا "كشف_النسبة" بدل "كشف نسبة" أغيرهولك بسهولة.
