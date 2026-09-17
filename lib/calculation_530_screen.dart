@@ -64,13 +64,18 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       // أكتر من مرة — ده اللي كان بيسبب تضارب في جدول الـ fills جوه
       // ملف الإكسل الناتج ويخلي بعض الألوان تضيع لما إكسل يفتح الملف.
 
-      final colorWhite = ex.ExcelColor.fromHexString('FFFFFF');
-      final colorRed = ex.ExcelColor.fromHexString('C00000');
-      final colorTitleBg = ex.ExcelColor.fromHexString('1F4E78');
-      final colorHeaderBg = ex.ExcelColor.fromHexString('2E75B6');
-      final colorTotalBg = ex.ExcelColor.fromHexString('FCE4D6');
-      final colorBorderMedium = ex.ExcelColor.fromHexString('808080');
-      final colorBorderThin = ex.ExcelColor.fromHexString('BFBFBF');
+      // بنستخدم الألوان الجاهزة (constants) بدل ExcelColor.fromHexString،
+      // لأن توثيق المكتبة نفسه بيحذّر إن fromHexString "غير آمنة" وممكن
+      // "تكسر ملف الإكسل" — وده فعليًا اللي كان بيحصل: الألوان المخصصة
+      // مش بتتسجل صح في جدول الـ fills جوه styles.xml فتضيع لما إكسل
+      // يفتح الملف، بعكس الألوان الجاهزة اللي مسجّلة بأمان في المكتبة.
+      final colorWhite = ex.ExcelColor.white;
+      final colorRed = ex.ExcelColor.red900;
+      final colorTitleBg = ex.ExcelColor.blueGrey900;
+      final colorHeaderBg = ex.ExcelColor.blue700;
+      final colorTotalBg = ex.ExcelColor.orange100;
+      final colorBorderMedium = ex.ExcelColor.grey600;
+      final colorBorderThin = ex.ExcelColor.grey400;
 
       final thinBorder = ex.Border(
         borderStyle: ex.BorderStyle.Thin,
