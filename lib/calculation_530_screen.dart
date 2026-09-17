@@ -70,7 +70,7 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       // مش بتتسجل صح في جدول الـ fills جوه styles.xml فتضيع لما إكسل
       // يفتح الملف، بعكس الألوان الجاهزة اللي مسجّلة بأمان في المكتبة.
       final colorWhite = ex.ExcelColor.white;
-      final colorTotalText = ex.ExcelColor.black;
+      final colorTotalText = ex.ExcelColor.blue900;
       final colorTitleBg = ex.ExcelColor.blueGrey900;
       final colorHeaderBg = ex.ExcelColor.blue700;
       final colorTotalBg = ex.ExcelColor.grey300;
