@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'percentage_screen.dart';
+import 'calculation_530_screen.dart';
 
 void main() {
   runApp(const ExcelFormatterApp());
@@ -34,6 +35,16 @@ class HomePage extends StatelessWidget {
         context,
         MaterialPageRoute(
           builder: (_) => const PercentageScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (title == 'حساب 530') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const Calculation530Screen(),
         ),
       );
       return;
