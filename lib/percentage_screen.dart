@@ -15,7 +15,6 @@ class PercentageScreen extends StatefulWidget {
 class _PercentageScreenState extends State<PercentageScreen> {
   Uint8List? _selectedBytes;
   String? _selectedFileName;
-
   Uint8List? _preparedFile;
 
   final TextEditingController _fileNameController =
@@ -76,7 +75,6 @@ class _PercentageScreenState extends State<PercentageScreen> {
       }
 
       final reportSheet = input.tables['Report']!;
-
       final detailsSheet = input.tables['تفاصيل التموينات'];
 
       final detailsMap = _buildDetailsMap(detailsSheet);
@@ -285,28 +283,28 @@ class _PercentageScreenState extends State<PercentageScreen> {
 
       final details = detailsMap[vehicle] ?? {};
 
-      final بورسعيد = _numberValueFromDynamic(
+      final portSaid = _numberValueFromDynamic(
         details['بورسعيد'],
       );
 
-      final اسماعيلية = _numberValueFromDynamic(
+      final ismailia = _numberValueFromDynamic(
         details['إسماعيلية'],
       );
 
-      final سويس = _numberValueFromDynamic(
+      final suez = _numberValueFromDynamic(
         details['سويس'],
       );
 
-      final كارت = _numberValueFromDynamic(
+      final smartCard = _numberValueFromDynamic(
         details['كارت ذكي'],
       );
 
-      final غاز = _numberValueFromDynamic(
+      final gas = _numberValueFromDynamic(
         details['غاز'],
       );
 
       final totalQuantity =
-          بورسعيد + اسماعيلية + سويس + كارت + غاز;
+          portSaid + ismailia + suez + smartCard + gas;
 
       final startOdometer = _numberValue(
         row,
@@ -371,35 +369,35 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         4,
         outputRow,
-        بورسعيد,
+        portSaid,
       );
 
       _setValue(
         output,
         5,
         outputRow,
-        اسماعيلية,
+        ismailia,
       );
 
       _setValue(
         output,
         6,
         outputRow,
-        سويس,
+        suez,
       );
 
       _setValue(
         output,
         7,
         outputRow,
-        كارت,
+        smartCard,
       );
 
       _setValue(
         output,
         8,
         outputRow,
-        غاز,
+        gas,
       );
 
       _setValue(
