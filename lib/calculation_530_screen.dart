@@ -50,33 +50,50 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
 
       final sheet = outputExcel['حساب 530'];
 
+      // اتجاه الشيت من اليمين لليسار (عربي)
+      sheet.isRTL = true;
+
       // =========================
-      // التنسيقات البسيطة
+      // التنسيقات
       // =========================
 
       final thinBorder = ex.Border(
         borderStyle: ex.BorderStyle.Thin,
+        borderColorHex: ex.ExcelColor.fromHexString('BFBFBF'),
+      );
+
+      final mediumBorder = ex.Border(
+        borderStyle: ex.BorderStyle.Medium,
+        borderColorHex: ex.ExcelColor.fromHexString('808080'),
       );
 
       final titleStyle = ex.CellStyle(
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
-        fontSize: 16,
+        fontSize: 18,
         bold: true,
+        fontColorHex: ex.ExcelColor.fromHexString('FFFFFF'),
+        backgroundColorHex: ex.ExcelColor.fromHexString('1F4E78'),
         horizontalAlign: ex.HorizontalAlign.Center,
         verticalAlign: ex.VerticalAlign.Center,
+        leftBorder: mediumBorder,
+        rightBorder: mediumBorder,
+        topBorder: mediumBorder,
+        bottomBorder: mediumBorder,
       );
 
       final headerStyle = ex.CellStyle(
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
-        fontSize: 11,
+        fontSize: 12,
         bold: true,
-        backgroundColorHex: ex.ExcelColor.fromHexString('D9D9D9'),
+        fontColorHex: ex.ExcelColor.fromHexString('FFFFFF'),
+        backgroundColorHex: ex.ExcelColor.fromHexString('2E75B6'),
         horizontalAlign: ex.HorizontalAlign.Center,
         verticalAlign: ex.VerticalAlign.Center,
-        leftBorder: thinBorder,
-        rightBorder: thinBorder,
-        topBorder: thinBorder,
-        bottomBorder: thinBorder,
+        textWrapping: ex.TextWrapping.WrapText,
+        leftBorder: mediumBorder,
+        rightBorder: mediumBorder,
+        topBorder: mediumBorder,
+        bottomBorder: mediumBorder,
       );
 
       final dataStyle = ex.CellStyle(
@@ -90,18 +107,61 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         bottomBorder: thinBorder,
       );
 
-      final totalStyle = ex.CellStyle(
+      // نفس تنسيق البيانات لكن بفاصلة عشرية للأعمدة الرقمية (العداد/اللترات/النسبة)
+      final numericDataStyle = ex.CellStyle(
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
-        fontSize: 12,
-        bold: true,
-        fontColorHex: ex.ExcelColor.fromHexString('FF0000'),
-        backgroundColorHex: ex.ExcelColor.fromHexString('F2F2F2'),
+        fontSize: 11,
         horizontalAlign: ex.HorizontalAlign.Center,
         verticalAlign: ex.VerticalAlign.Center,
+        numberFormat: ex.NumFormat.standard_2,
         leftBorder: thinBorder,
         rightBorder: thinBorder,
         topBorder: thinBorder,
         bottomBorder: thinBorder,
+      );
+
+      final totalStyle = ex.CellStyle(
+        fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
+        fontSize: 12,
+        bold: true,
+        fontColorHex: ex.ExcelColor.fromHexString('C00000'),
+        backgroundColorHex: ex.ExcelColor.fromHexString('FCE4D6'),
+        horizontalAlign: ex.HorizontalAlign.Center,
+        verticalAlign: ex.VerticalAlign.Center,
+        leftBorder: mediumBorder,
+        rightBorder: mediumBorder,
+        topBorder: mediumBorder,
+        bottomBorder: mediumBorder,
+      );
+
+      final totalLabelStyle = ex.CellStyle(
+        fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
+        fontSize: 12,
+        bold: true,
+        italic: true,
+        fontColorHex: ex.ExcelColor.fromHexString('C00000'),
+        backgroundColorHex: ex.ExcelColor.fromHexString('FCE4D6'),
+        horizontalAlign: ex.HorizontalAlign.Center,
+        verticalAlign: ex.VerticalAlign.Center,
+        leftBorder: mediumBorder,
+        rightBorder: mediumBorder,
+        topBorder: mediumBorder,
+        bottomBorder: mediumBorder,
+      );
+
+      final totalNumericStyle = ex.CellStyle(
+        fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
+        fontSize: 12,
+        bold: true,
+        fontColorHex: ex.ExcelColor.fromHexString('C00000'),
+        backgroundColorHex: ex.ExcelColor.fromHexString('FCE4D6'),
+        horizontalAlign: ex.HorizontalAlign.Center,
+        verticalAlign: ex.VerticalAlign.Center,
+        numberFormat: ex.NumFormat.standard_2,
+        leftBorder: mediumBorder,
+        rightBorder: mediumBorder,
+        topBorder: mediumBorder,
+        bottomBorder: mediumBorder,
       );
 
       // =========================
@@ -124,7 +184,7 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         titleStyle,
       );
 
-      sheet.setRowHeight(0, 30);
+      sheet.setRowHeight(0, 34);
 
       // =========================
       // رؤوس الأعمدة
@@ -152,7 +212,10 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         );
       }
 
-      sheet.setRowHeight(1, 24);
+      sheet.setRowHeight(1, 26);
+
+      // الأعمدة الرقمية (العداد، اللترات، النسبة الفعلية) تُعرض بتنسيق عشري
+      const numericColumns = {4, 5, 6};
 
       // =========================
       // تجميع السيارات
@@ -249,11 +312,12 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
                 rowIndex: rowNumber,
               ),
               cellValue,
-              cellStyle: dataStyle,
+              cellStyle:
+                  numericColumns.contains(column) ? numericDataStyle : dataStyle,
             );
           }
 
-          sheet.setRowHeight(rowNumber, 18);
+          sheet.setRowHeight(rowNumber, 20);
           rowNumber++;
         }
 
@@ -293,6 +357,16 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
           );
         }
 
+        // تسمية صف الإجمالي بصريًا (تنسيق فقط، لا يغيّر أي حساب)
+        sheet.updateCell(
+          ex.CellIndex.indexByColumnRow(
+            columnIndex: 3,
+            rowIndex: rowNumber,
+          ),
+          ex.TextCellValue('الإجمالي'),
+          cellStyle: totalLabelStyle,
+        );
+
         sheet.updateCell(
           ex.CellIndex.indexByColumnRow(
             columnIndex: 1,
@@ -310,10 +384,10 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
           ex.FormulaCellValue(
             'SUM(G${firstDataRow + 1}:G${lastDataRow + 1})',
           ),
-          cellStyle: totalStyle,
+          cellStyle: totalNumericStyle,
         );
 
-        sheet.setRowHeight(rowNumber, 26);
+        sheet.setRowHeight(rowNumber, 28);
 
         rowNumber++;
         serial++;
@@ -323,14 +397,14 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       // عرض الأعمدة
       // =========================
 
-      sheet.setColumnWidth(0, 7);
-      sheet.setColumnWidth(1, 14);
+      sheet.setColumnWidth(0, 6);
+      sheet.setColumnWidth(1, 15);
       sheet.setColumnWidth(2, 12);
-      sheet.setColumnWidth(3, 18);
-      sheet.setColumnWidth(4, 15);
+      sheet.setColumnWidth(3, 20);
+      sheet.setColumnWidth(4, 16);
       sheet.setColumnWidth(5, 14);
-      sheet.setColumnWidth(6, 12);
-      sheet.setColumnWidth(7, 16);
+      sheet.setColumnWidth(6, 13);
+      sheet.setColumnWidth(7, 17);
 
       // =========================
       // تحميل الملف
