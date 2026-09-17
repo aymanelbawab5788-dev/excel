@@ -43,12 +43,15 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
 
       final outputExcel = ex.Excel.createExcel();
 
+      // نُنشئ الشيت المطلوب أولًا، ثم نحذف الشيت الافتراضي بعد ما يبقى
+      // في أكتر من شيت بالملف (المكتبة بترفض حذف آخر شيت موجود، فلو
+      // حذفناه قبل إنشاء شيتنا كان بيفضل عالقًا في الملف الناتج).
+      final sheet = outputExcel['حساب 530'];
+
       final defaultSheet = outputExcel.getDefaultSheet();
-      if (defaultSheet != null) {
+      if (defaultSheet != null && defaultSheet != 'حساب 530') {
         outputExcel.delete(defaultSheet);
       }
-
-      final sheet = outputExcel['حساب 530'];
 
       // اتجاه الشيت من اليمين لليسار (عربي)
       sheet.isRTL = true;
@@ -56,23 +59,35 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       // =========================
       // التنسيقات
       // =========================
+      // ملاحظة: بنعرّف كل لون كـ instance واحدة ونعيد استخدامها في كل
+      // الأنماط، بدل ما ننشئ ExcelColor.fromHexString جديد لنفس اللون
+      // أكتر من مرة — ده اللي كان بيسبب تضارب في جدول الـ fills جوه
+      // ملف الإكسل الناتج ويخلي بعض الألوان تضيع لما إكسل يفتح الملف.
+
+      final colorWhite = ex.ExcelColor.fromHexString('FFFFFF');
+      final colorRed = ex.ExcelColor.fromHexString('C00000');
+      final colorTitleBg = ex.ExcelColor.fromHexString('1F4E78');
+      final colorHeaderBg = ex.ExcelColor.fromHexString('2E75B6');
+      final colorTotalBg = ex.ExcelColor.fromHexString('FCE4D6');
+      final colorBorderMedium = ex.ExcelColor.fromHexString('808080');
+      final colorBorderThin = ex.ExcelColor.fromHexString('BFBFBF');
 
       final thinBorder = ex.Border(
         borderStyle: ex.BorderStyle.Thin,
-        borderColorHex: ex.ExcelColor.fromHexString('BFBFBF'),
+        borderColorHex: colorBorderThin,
       );
 
       final mediumBorder = ex.Border(
         borderStyle: ex.BorderStyle.Medium,
-        borderColorHex: ex.ExcelColor.fromHexString('808080'),
+        borderColorHex: colorBorderMedium,
       );
 
       final titleStyle = ex.CellStyle(
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
         fontSize: 18,
         bold: true,
-        fontColorHex: ex.ExcelColor.fromHexString('FFFFFF'),
-        backgroundColorHex: ex.ExcelColor.fromHexString('1F4E78'),
+        fontColorHex: colorWhite,
+        backgroundColorHex: colorTitleBg,
         horizontalAlign: ex.HorizontalAlign.Center,
         verticalAlign: ex.VerticalAlign.Center,
         leftBorder: mediumBorder,
@@ -85,8 +100,8 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
         fontSize: 12,
         bold: true,
-        fontColorHex: ex.ExcelColor.fromHexString('FFFFFF'),
-        backgroundColorHex: ex.ExcelColor.fromHexString('2E75B6'),
+        fontColorHex: colorWhite,
+        backgroundColorHex: colorHeaderBg,
         horizontalAlign: ex.HorizontalAlign.Center,
         verticalAlign: ex.VerticalAlign.Center,
         textWrapping: ex.TextWrapping.WrapText,
@@ -124,8 +139,8 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
         fontSize: 12,
         bold: true,
-        fontColorHex: ex.ExcelColor.fromHexString('C00000'),
-        backgroundColorHex: ex.ExcelColor.fromHexString('FCE4D6'),
+        fontColorHex: colorRed,
+        backgroundColorHex: colorTotalBg,
         horizontalAlign: ex.HorizontalAlign.Center,
         verticalAlign: ex.VerticalAlign.Center,
         leftBorder: mediumBorder,
@@ -139,8 +154,8 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         fontSize: 12,
         bold: true,
         italic: true,
-        fontColorHex: ex.ExcelColor.fromHexString('C00000'),
-        backgroundColorHex: ex.ExcelColor.fromHexString('FCE4D6'),
+        fontColorHex: colorRed,
+        backgroundColorHex: colorTotalBg,
         horizontalAlign: ex.HorizontalAlign.Center,
         verticalAlign: ex.VerticalAlign.Center,
         leftBorder: mediumBorder,
@@ -153,8 +168,8 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
         fontSize: 12,
         bold: true,
-        fontColorHex: ex.ExcelColor.fromHexString('C00000'),
-        backgroundColorHex: ex.ExcelColor.fromHexString('FCE4D6'),
+        fontColorHex: colorRed,
+        backgroundColorHex: colorTotalBg,
         horizontalAlign: ex.HorizontalAlign.Center,
         verticalAlign: ex.VerticalAlign.Center,
         numberFormat: ex.NumFormat.standard_2,
@@ -168,15 +183,40 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       // العنوان
       // =========================
 
-      sheet.merge(
-        ex.CellIndex.indexByString('A1'),
-        ex.CellIndex.indexByString('H1'),
-      );
+      const headers = [
+        'م',
+        'رقم السيارة',
+        'الأحرف',
+        'المحطة',
+        'التاريخ',
+        'العداد',
+        'اللترات',
+        'النسبة الفعلية',
+      ];
+
+      // نطبّق نمط العنوان على كل خلية من A1 لـ H1 قبل الدمج، لأن
+      // setMergedCellStyle لوحدها كانت بتنتج أنماط متضاربة لخلايا
+      // نفس النطاق المدموج في الملف الناتج.
+      for (int column = 0; column < headers.length; column++) {
+        sheet.updateCell(
+          ex.CellIndex.indexByColumnRow(
+            columnIndex: column,
+            rowIndex: 0,
+          ),
+          ex.TextCellValue(''),
+          cellStyle: titleStyle,
+        );
+      }
 
       sheet.updateCell(
         ex.CellIndex.indexByString('A1'),
         ex.TextCellValue('تفريغ مسحوبات الوقود'),
         cellStyle: titleStyle,
+      );
+
+      sheet.merge(
+        ex.CellIndex.indexByString('A1'),
+        ex.CellIndex.indexByString('H1'),
       );
 
       sheet.setMergedCellStyle(
@@ -189,17 +229,6 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       // =========================
       // رؤوس الأعمدة
       // =========================
-
-      const headers = [
-        'م',
-        'رقم السيارة',
-        'الأحرف',
-        'المحطة',
-        'التاريخ',
-        'العداد',
-        'اللترات',
-        'النسبة الفعلية',
-      ];
 
       for (int column = 0; column < headers.length; column++) {
         sheet.updateCell(
