@@ -16,6 +16,11 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
   bool _processing = false;
   String _status = 'اختر ملف Excel للبدء';
 
+  Uint8List? _preparedFile;
+
+  final TextEditingController _fileNameController =
+      TextEditingController(text: 'حساب_530');
+
   Future<void> _pickAndProcessFile() async {
     final file = await FilePicker.pickFile(
       type: FileType.custom,
@@ -26,6 +31,7 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
 
     setState(() {
       _processing = true;
+      _preparedFile = null;
       _status = 'جاري معالجة الملف...';
     });
 
@@ -43,9 +49,6 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
 
       final outputExcel = ex.Excel.createExcel();
 
-      // نُنشئ الشيت المطلوب أولًا، ثم نحذف الشيت الافتراضي بعد ما يبقى
-      // في أكتر من شيت بالملف (المكتبة بترفض حذف آخر شيت موجود، فلو
-      // حذفناه قبل إنشاء شيتنا كان بيفضل عالقًا في الملف الناتج).
       final sheet = outputExcel['حساب 530'];
 
       final defaultSheet = outputExcel.getDefaultSheet();
@@ -53,22 +56,12 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         outputExcel.delete(defaultSheet);
       }
 
-      // اتجاه الشيت من اليمين لليسار (عربي)
       sheet.isRTL = true;
 
       // =========================
       // التنسيقات
       // =========================
-      // ملاحظة: بنعرّف كل لون كـ instance واحدة ونعيد استخدامها في كل
-      // الأنماط، بدل ما ننشئ ExcelColor.fromHexString جديد لنفس اللون
-      // أكتر من مرة — ده اللي كان بيسبب تضارب في جدول الـ fills جوه
-      // ملف الإكسل الناتج ويخلي بعض الألوان تضيع لما إكسل يفتح الملف.
 
-      // بنستخدم الألوان الجاهزة (constants) بدل ExcelColor.fromHexString،
-      // لأن توثيق المكتبة نفسه بيحذّر إن fromHexString "غير آمنة" وممكن
-      // "تكسر ملف الإكسل" — وده فعليًا اللي كان بيحصل: الألوان المخصصة
-      // مش بتتسجل صح في جدول الـ fills جوه styles.xml فتضيع لما إكسل
-      // يفتح الملف، بعكس الألوان الجاهزة اللي مسجّلة بأمان في المكتبة.
       final colorWhite = ex.ExcelColor.white;
       final colorTotalText = ex.ExcelColor.blue900;
       final colorTitleBg = ex.ExcelColor.blueGrey900;
@@ -88,9 +81,6 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         borderColorHex: colorBorderMedium,
       );
 
-      // حد خارجي أثقل هيتطبّق على محيط الجدول كله بعد ما نخلص كتابة
-      // كل البيانات، عشان يبان الجدول كصندوق واحد متكامل زي التقارير
-      // الرسمية، وخطوط الشبكة الداخلية تفضل أرفع وواضحة.
       final outerBorder = ex.Border(
         borderStyle: ex.BorderStyle.Medium,
         borderColorHex: colorBorderOuter,
@@ -136,7 +126,6 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         bottomBorder: thinBorder,
       );
 
-      // نفس تنسيق البيانات لكن بفاصلة عشرية للأعمدة الرقمية (العداد/اللترات/النسبة)
       final numericDataStyle = ex.CellStyle(
         fontFamily: ex.getFontFamily(ex.FontFamily.Arial),
         fontSize: 11,
@@ -208,9 +197,6 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         'النسبة الفعلية',
       ];
 
-      // نطبّق نمط العنوان على كل خلية من A1 لـ H1 قبل الدمج، لأن
-      // setMergedCellStyle لوحدها كانت بتنتج أنماط متضاربة لخلايا
-      // نفس النطاق المدموج في الملف الناتج.
       for (int column = 0; column < headers.length; column++) {
         sheet.updateCell(
           ex.CellIndex.indexByColumnRow(
@@ -257,7 +243,6 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
 
       sheet.setRowHeight(1, 20);
 
-      // الأعمدة الرقمية (العداد، اللترات، النسبة الفعلية) تُعرض بتنسيق عشري
       const numericColumns = {4, 5, 6};
 
       // =========================
@@ -355,8 +340,9 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
                 rowIndex: rowNumber,
               ),
               cellValue,
-              cellStyle:
-                  numericColumns.contains(column) ? numericDataStyle : dataStyle,
+              cellStyle: numericColumns.contains(column)
+                  ? numericDataStyle
+                  : dataStyle,
             );
           }
 
@@ -400,7 +386,6 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
           );
         }
 
-        // تسمية صف الإجمالي بصريًا (تنسيق فقط، لا يغيّر أي حساب)
         sheet.updateCell(
           ex.CellIndex.indexByColumnRow(
             columnIndex: 3,
@@ -437,11 +422,9 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       }
 
       // =========================
-      // حد خارجي حول الجدول كله (تنسيق فقط)
+      // حد خارجي حول الجدول كله
       // =========================
-      // بنمرّ على خلايا محيط الجدول بس (أول/آخر صف وأول/آخر عمود)
-      // ونعدّل حد الجهة الخارجية لكل خلية منها لتكون أغلظ، من غير ما
-      // نلمس القيمة المكتوبة جوه الخلية ولا باقي حدودها الداخلية.
+
       final firstBodyRow = 0;
       final lastBodyRow = rowNumber - 1;
       const firstBodyCol = 0;
@@ -464,10 +447,18 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
           final existingStyle = sheet.cell(cellIndex).cellStyle;
           if (existingStyle == null) continue;
 
-          if (r == firstBodyRow) existingStyle.topBorder = outerBorder;
-          if (r == lastBodyRow) existingStyle.bottomBorder = outerBorder;
-          if (c == firstBodyCol) existingStyle.leftBorder = outerBorder;
-          if (c == lastBodyCol) existingStyle.rightBorder = outerBorder;
+          if (r == firstBodyRow) {
+            existingStyle.topBorder = outerBorder;
+          }
+          if (r == lastBodyRow) {
+            existingStyle.bottomBorder = outerBorder;
+          }
+          if (c == firstBodyCol) {
+            existingStyle.leftBorder = outerBorder;
+          }
+          if (c == lastBodyCol) {
+            existingStyle.rightBorder = outerBorder;
+          }
 
           sheet.cell(cellIndex).cellStyle = existingStyle;
         }
@@ -487,34 +478,50 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       sheet.setColumnWidth(7, 17);
 
       // =========================
-      // تحميل الملف
+      // تجهيز الملف بدون تحميل
       // =========================
 
-      // ملاحظة: لو بعتنا fileName هنا، المكتبة بتعمل تحميل (download)
-      // تلقائي بنفسها على الويب، فبيحصل تحميل مرتين لأننا كمان بنستدعي
-      // _downloadFile() يدويًا تحت. فبنسيب save() من غير fileName
-      // ونسيب التحميل يتم مرة واحدة بس من خلال _downloadFile().
       final outputBytes = outputExcel.save();
 
       if (outputBytes == null) {
         throw Exception('فشل إنشاء ملف Excel');
       }
 
-      _downloadFile(
-        Uint8List.fromList(outputBytes),
-        'حساب_530.xlsx',
-      );
-
       setState(() {
+        _preparedFile = Uint8List.fromList(outputBytes);
         _processing = false;
-        _status = 'تم تجهيز الملف وتحميله بنجاح';
+        _status = 'تم تجهيز الملف بنجاح — اضغط تصدير الملف';
       });
     } catch (e) {
       setState(() {
         _processing = false;
+        _preparedFile = null;
         _status = 'حدث خطأ: $e';
       });
     }
+  }
+
+  void _exportFile() {
+    if (_preparedFile == null) return;
+
+    String fileName = _fileNameController.text.trim();
+
+    if (fileName.isEmpty) {
+      fileName = 'حساب_530';
+    }
+
+    if (!fileName.toLowerCase().endsWith('.xlsx')) {
+      fileName = '$fileName.xlsx';
+    }
+
+    _downloadFile(
+      _preparedFile!,
+      fileName,
+    );
+
+    setState(() {
+      _status = 'تم تصدير الملف بنجاح';
+    });
   }
 
   String _cellText(List<ex.Data?> row, int index) {
@@ -563,6 +570,12 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
   }
 
   @override
+  void dispose() {
+    _fileNameController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -572,47 +585,92 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
           centerTitle: true,
         ),
         body: Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.calculate_outlined,
-                  size: 70,
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'حساب 530',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 550,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.calculate_outlined,
+                    size: 70,
                   ),
-                ),
-                const SizedBox(height: 30),
-                ElevatedButton.icon(
-                  onPressed: _processing ? null : _pickAndProcessFile,
-                  icon: _processing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(Icons.upload_file),
-                  label: Text(
-                    _processing
-                        ? 'جاري المعالجة...'
-                        : 'اختيار ملف Excel',
+                  const SizedBox(height: 20),
+                  const Text(
+                    'حساب 530',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  _status,
-                  textAlign: TextAlign.center,
-                ),
-              ],
+                  const SizedBox(height: 30),
+
+                  // اختيار الملف
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed:
+                          _processing ? null : _pickAndProcessFile,
+                      icon: _processing
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.upload_file),
+                      label: Text(
+                        _processing
+                            ? 'جاري المعالجة...'
+                            : 'اختيار ملف Excel',
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // اسم الملف
+                  TextField(
+                    controller: _fileNameController,
+                    textDirection: TextDirection.rtl,
+                    enabled: _preparedFile != null && !_processing,
+                    decoration: const InputDecoration(
+                      labelText: 'اسم الملف',
+                      hintText: 'اكتب اسم الملف',
+                      prefixIcon: Icon(
+                        Icons.drive_file_rename_outline,
+                      ),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Text(
+                    _status,
+                    textAlign: TextAlign.center,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // تصدير الملف
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed:
+                          _preparedFile == null || _processing
+                              ? null
+                              : _exportFile,
+                      icon: const Icon(Icons.download),
+                      label: const Text('تصدير الملف'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
