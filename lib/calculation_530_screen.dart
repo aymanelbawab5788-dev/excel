@@ -490,9 +490,11 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       // تحميل الملف
       // =========================
 
-      final outputBytes = outputExcel.save(
-        fileName: 'حساب_530.xlsx',
-      );
+      // ملاحظة: لو بعتنا fileName هنا، المكتبة بتعمل تحميل (download)
+      // تلقائي بنفسها على الويب، فبيحصل تحميل مرتين لأننا كمان بنستدعي
+      // _downloadFile() يدويًا تحت. فبنسيب save() من غير fileName
+      // ونسيب التحميل يتم مرة واحدة بس من خلال _downloadFile().
+      final outputBytes = outputExcel.save();
 
       if (outputBytes == null) {
         throw Exception('فشل إنشاء ملف Excel');
