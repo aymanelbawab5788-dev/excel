@@ -470,7 +470,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         9,
         outputRow,
-        '=SUM(E$excelRow:I$excelRow)',
+        FormulaCellValue(
+          'SUM(E$excelRow:I$excelRow)',
+        ),
         isAltRow: isAltRow,
       );
 
@@ -494,7 +496,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         12,
         outputRow,
-        '=L$excelRow-K$excelRow',
+        FormulaCellValue(
+          'L$excelRow-K$excelRow',
+        ),
         isAltRow: isAltRow,
       );
 
@@ -502,7 +506,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         13,
         outputRow,
-        '=IF(M$excelRow>0,ROUND(J$excelRow/M$excelRow*100,1),0)',
+        FormulaCellValue(
+          'IF(M$excelRow>0,ROUND(J$excelRow/M$excelRow*100,1),0)',
+        ),
         isAltRow: isAltRow,
       );
 
@@ -519,8 +525,10 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         15,
         outputRow,
-        '=IF((N$excelRow-(O$excelRow*1.5))>0,'
-            'ROUND(N$excelRow-(O$excelRow*1.5),1),"")',
+        FormulaCellValue(
+          'IF((N$excelRow-(O$excelRow*1.5))>0,'
+          'ROUND(N$excelRow-(O$excelRow*1.5),1),"")',
+        ),
         isAltRow: isAltRow,
       );
 
@@ -528,7 +536,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         16,
         outputRow,
-        '=IF((N$excelRow-(O$excelRow*1.5))>0,"متجاوز","طبيعي")',
+        FormulaCellValue(
+          'IF((N$excelRow-(O$excelRow*1.5))>0,"متجاوز","طبيعي")',
+        ),
         isAltRow: isAltRow,
         highlightColorHex:
             status == 'متجاوز' ? _kStatusExceedColor : _kStatusOkColor,
@@ -560,7 +570,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       4,
       outputRow,
-      '=SUM(E3:E$lastDataRow)',
+      FormulaCellValue(
+        'SUM(E3:E$lastDataRow)',
+      ),
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -569,7 +581,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       5,
       outputRow,
-      '=SUM(F3:F$lastDataRow)',
+      FormulaCellValue(
+        'SUM(F3:F$lastDataRow)',
+      ),
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -578,7 +592,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       6,
       outputRow,
-      '=SUM(G3:G$lastDataRow)',
+      FormulaCellValue(
+        'SUM(G3:G$lastDataRow)',
+      ),
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -587,7 +603,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       7,
       outputRow,
-      '=SUM(H3:H$lastDataRow)',
+      FormulaCellValue(
+        'SUM(H3:H$lastDataRow)',
+      ),
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -596,7 +614,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       8,
       outputRow,
-      '=SUM(I3:I$lastDataRow)',
+      FormulaCellValue(
+        'SUM(I3:I$lastDataRow)',
+      ),
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -605,7 +625,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       9,
       outputRow,
-      '=SUM(J3:J$lastDataRow)',
+      FormulaCellValue(
+        'SUM(J3:J$lastDataRow)',
+      ),
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -739,9 +761,8 @@ class _PercentageScreenState extends State<PercentageScreen> {
     // لو عكسنا الترتيب، مكتبة excel بتعمل reset للتنسيق تلقائيًا وقت
     // ما بتحدد صيغة الرقم (number format) للخلية، فيضيع اللون والحدود.
     if (value != null) {
-      if (value is String && value.startsWith('=')) {
-        // نص بيبدأ بـ "=" يتكتب كمعادلة إكسل حقيقية، مش كنص عادي
-        cell.value = FormulaCellValue(value.substring(1));
+      if (value is FormulaCellValue) {
+        cell.value = value;
       } else if (value is int) {
         cell.value = IntCellValue(value);
       } else if (value is double) {
