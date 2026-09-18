@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Border, BorderStyle;
 import 'package:universal_html/html.dart' as html;
 
 class InvoicesScreen extends StatefulWidget {
@@ -28,17 +28,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: ['xlsx'],
-      withData: true,
     );
 
-    if (result == null || result.files.single.bytes == null) {
+    if (file == null) {
       return;
     }
-
-    final bytes = result.files.single.bytes!;
 
     setState(() {
       _isProcessing = true;
@@ -47,6 +44,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     });
 
     try {
+      final bytes = await file.readAsBytes();
       final output = await _processFile(bytes);
 
       if (!mounted) return;
@@ -95,6 +93,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
     for (int column = 0; column < rows.first.length; column++) {
       final value = _cellText(rows.first[column]).trim();
+
       if (value.isNotEmpty) {
         headers[_normalizeHeader(value)] = column;
       }
@@ -162,12 +161,18 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     final output = Excel.createExcel();
 
     final defaultSheet = output.getDefaultSheet();
+
     if (defaultSheet != null && defaultSheet != 'فواتير') {
       output.rename(defaultSheet, 'فواتير');
     }
 
     final sheet = output['فواتير'];
     sheet.isRTL = true;
+
+    final thinBorder = Border(
+      borderStyle: BorderStyle.Thin,
+      borderColorHex: 'BFBFBF',
+    );
 
     final titleStyle = CellStyle(
       fontFamily: getFontFamily(FontFamily.Calibri),
@@ -187,23 +192,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       backgroundColorHex: ExcelColor.fromHexString('D9D9D9'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
-      textWrapping: TextWrapping.WrapText,
-      leftBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      rightBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      topBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      bottomBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
+      wrap: TextWrapping.WrapText,
+      leftBorder: thinBorder,
+      rightBorder: thinBorder,
+      topBorder: thinBorder,
+      bottomBorder: thinBorder,
     );
 
     final dataStyle = CellStyle(
@@ -212,22 +205,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       bold: true,
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
-      leftBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      rightBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      topBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      bottomBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
+      leftBorder: thinBorder,
+      rightBorder: thinBorder,
+      topBorder: thinBorder,
+      bottomBorder: thinBorder,
     );
 
     final totalStyle = CellStyle(
@@ -238,22 +219,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       backgroundColorHex: ExcelColor.fromHexString('595959'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
-      leftBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      rightBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      topBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      bottomBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
+      leftBorder: thinBorder,
+      rightBorder: thinBorder,
+      topBorder: thinBorder,
+      bottomBorder: thinBorder,
     );
 
     final summaryStyle = CellStyle(
@@ -264,37 +233,23 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       backgroundColorHex: ExcelColor.fromHexString('1F4E78'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
-      leftBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      rightBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      topBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
-      bottomBorder: Border(
-        borderStyle: BorderStyle.Thin,
-        borderColorHex: 'BFBFBF',
-      ),
+      leftBorder: thinBorder,
+      rightBorder: thinBorder,
+      topBorder: thinBorder,
+      bottomBorder: thinBorder,
     );
+
+    const title =
+        'اجمالي مسحوبات قسم نقل بورسعيد عن شهر اغسطس الفترة من 1/8/2026 الي 31/8/2026';
 
     sheet.merge(
       CellIndex.indexByString('A1'),
       CellIndex.indexByString('L1'),
-      customValue: TextCellValue(
-        'اجمالي مسحوبات قسم نقل بورسعيد عن شهر اغسطس الفترة من 1/8/2026 الي 31/8/2026',
-      ),
     );
 
     sheet.updateCell(
       CellIndex.indexByString('A1'),
-      TextCellValue(
-        'اجمالي مسحوبات قسم نقل بورسعيد عن شهر اغسطس الفترة من 1/8/2026 الي 31/8/2026',
-      ),
+      TextCellValue(title),
       cellStyle: titleStyle,
     );
 
@@ -322,7 +277,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
     for (int column = 0; column < outputHeaders.length; column++) {
       sheet.updateCell(
-        CellIndex.indexByColumnRow(column, 1),
+        CellIndex.indexByColumnRow(
+          columnIndex: column,
+          rowIndex: 1,
+        ),
         TextCellValue(outputHeaders[column]),
         cellStyle: headerStyle,
       );
@@ -330,7 +288,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
     sheet.setRowHeight(1, 24);
 
-    final dataRows = <List<Object>>[];
+    final dataRows = <List<CellValue>>[];
 
     for (int rowIndex = 1; rowIndex < rows.length; rowIndex++) {
       final row = rows[rowIndex];
@@ -383,46 +341,63 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         continue;
       }
 
+      final solarValue = solarQuantity * solarPrice;
+      final value92 = quantity92 * price92;
+      final value95 = quantity95 * price95;
+      final totalValue = solarValue + value92 + value95;
+
       dataRows.add([
-        dateValue,
-        invoiceValue,
-        solarQuantity,
-        solarPrice,
-        solarQuantity * solarPrice,
-        quantity92,
-        price92,
-        quantity92 * price92,
-        quantity95,
-        price95,
-        quantity95 * price95,
-        (solarQuantity * solarPrice) +
-            (quantity92 * price92) +
-            (quantity95 * price95),
+        _toCellValue(dateValue),
+        _toCellValue(invoiceValue),
+        _toCellValue(solarQuantity),
+        _toCellValue(solarPrice),
+        _toCellValue(solarValue),
+        _toCellValue(quantity92),
+        _toCellValue(price92),
+        _toCellValue(value92),
+        _toCellValue(quantity95),
+        _toCellValue(price95),
+        _toCellValue(value95),
+        _toCellValue(totalValue),
       ]);
     }
 
-    int excelRow = 3;
+    for (int row = 0; row < dataRows.length; row++) {
+      final excelRow = row + 2;
 
-    for (final row in dataRows) {
-      for (int column = 0; column < row.length; column++) {
-        final value = row[column];
-
+      for (int column = 0; column < dataRows[row].length; column++) {
         sheet.updateCell(
-          CellIndex.indexByColumnRow(column, excelRow - 1),
-          _toCellValue(value),
+          CellIndex.indexByColumnRow(
+            columnIndex: column,
+            rowIndex: excelRow,
+          ),
+          dataRows[row][column],
           cellStyle: dataStyle,
         );
       }
 
-      sheet.setRowHeight(excelRow - 1, 18);
-      excelRow++;
+      sheet.setRowHeight(excelRow, 18);
     }
 
-    final lastRow = excelRow - 1;
-    final totalRow = lastRow + 1;
+    final lastDataRow = dataRows.length + 2;
+    final totalRow = lastDataRow + 1;
+
+    for (int column = 0; column < 12; column++) {
+      sheet.updateCell(
+        CellIndex.indexByColumnRow(
+          columnIndex: column,
+          rowIndex: totalRow - 1,
+        ),
+        TextCellValue(''),
+        cellStyle: totalStyle,
+      );
+    }
 
     sheet.updateCell(
-      CellIndex.indexByColumnRow(0, totalRow - 1),
+      CellIndex.indexByColumnRow(
+        columnIndex: 0,
+        rowIndex: totalRow - 1,
+      ),
       TextCellValue('الإجمالي'),
       cellStyle: totalStyle,
     );
@@ -437,53 +412,41 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       11,
     ];
 
-    for (int column = 0; column < 12; column++) {
-      if (column != 0) {
-        sheet.updateCell(
-          CellIndex.indexByColumnRow(column, totalRow - 1),
-          TextCellValue(''),
-          cellStyle: totalStyle,
-        );
-      } else {
-        sheet.updateCell(
-          CellIndex.indexByColumnRow(column, totalRow - 1),
-          TextCellValue('الإجمالي'),
-          cellStyle: totalStyle,
-        );
-      }
+    for (final column in sumColumns) {
+      final columnLetter = _columnLetter(column);
 
-      if (sumColumns.contains(column)) {
-        final columnLetter = _columnLetter(column);
-
-        sheet.updateCell(
-          CellIndex.indexByColumnRow(column, totalRow - 1),
-          FormulaCellValue(
-            'SUM($columnLetter\$3:$columnLetter\$$lastRow)',
-          ),
-          cellStyle: totalStyle,
-        );
-      }
+      sheet.updateCell(
+        CellIndex.indexByColumnRow(
+          columnIndex: column,
+          rowIndex: totalRow - 1,
+        ),
+        FormulaCellValue(
+          'SUM(${columnLetter}3:${columnLetter}$lastDataRow)',
+        ),
+        cellStyle: totalStyle,
+      );
     }
 
     sheet.setRowHeight(totalRow - 1, 24);
 
     final summaryRow = totalRow + 1;
 
-    final summaryValues = <int, Object>{
-      1: 'سولار',
-      2: FormulaCellValue('C\$$totalRow'),
-      4: 'بنزين 92',
-      5: FormulaCellValue('F\$$totalRow'),
-      7: 'بنزين 95',
-      8: FormulaCellValue('I\$$totalRow'),
+    final summaryValues = <int, CellValue>{
+      1: TextCellValue('سولار'),
+      2: FormulaCellValue('C$totalRow'),
+      4: TextCellValue('بنزين 92'),
+      5: FormulaCellValue('F$totalRow'),
+      7: TextCellValue('بنزين 95'),
+      8: FormulaCellValue('I$totalRow'),
     };
 
     for (int column = 0; column < 12; column++) {
-      final value = summaryValues[column] ?? '';
-
       sheet.updateCell(
-        CellIndex.indexByColumnRow(column, summaryRow - 1),
-        _toCellValue(value),
+        CellIndex.indexByColumnRow(
+          columnIndex: column,
+          rowIndex: summaryRow - 1,
+        ),
+        summaryValues[column] ?? TextCellValue(''),
         cellStyle: summaryStyle,
       );
     }
@@ -519,7 +482,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   Future<void> _exportFile() async {
-    if (_preparedFile == null) return;
+    if (_preparedFile == null) {
+      return;
+    }
 
     String fileName = _fileNameController.text.trim();
 
@@ -543,6 +508,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       ..style.display = 'none';
 
     html.document.body?.append(anchor);
+
     anchor.click();
     anchor.remove();
 
@@ -555,6 +521,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   ) {
     for (final name in names) {
       final index = headers[_normalizeHeader(name)];
+
       if (index != null) {
         return index;
       }
@@ -576,24 +543,30 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       return '';
     }
 
-    return cell.value.toString();
-  }
-
-  Object? _cellValue(List<Data?> row, int index) {
-    if (index < 0 || index >= row.length) {
-      return null;
-    }
-
-    final value = row[index]?.value;
+    final value = cell.value!;
 
     if (value is TextCellValue) {
       return value.value.text;
     }
 
-    return value;
+    return value.toString();
   }
 
-  double _numberValue(List<Data?> row, int index) {
+  CellValue? _cellValue(
+    List<Data?> row,
+    int index,
+  ) {
+    if (index < 0 || index >= row.length) {
+      return null;
+    }
+
+    return row[index]?.value;
+  }
+
+  double _numberValue(
+    List<Data?> row,
+    int index,
+  ) {
     final value = _cellValue(row, index);
 
     if (value == null) {
@@ -609,35 +582,31 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     }
 
     if (value is FormulaCellValue) {
-      final result = value.result;
-
-      if (result is num) {
-        return result.toDouble();
-      }
-
-      return double.tryParse(
-            result?.toString().replaceAll(',', '').trim() ?? '',
-          ) ??
-          0;
+      return 0;
     }
 
-    if (value is num) {
-      return value.toDouble();
+    if (value is TextCellValue) {
+      final text = value.value.text
+          .replaceAll(',', '')
+          .replaceAll('٬', '')
+          .replaceAll('،', '.')
+          .trim();
+
+      return double.tryParse(text) ?? 0;
     }
 
-    final text = value
-        .toString()
-        .replaceAll(',', '')
-        .replaceAll('٬', '')
-        .replaceAll('،', '.')
-        .trim();
-
-    return double.tryParse(text) ?? 0;
+    return 0;
   }
 
-  bool _isEmptyValue(Object? value) {
-    if (value == null) return true;
-    if (value.toString().trim().isEmpty) return true;
+  bool _isEmptyValue(CellValue? value) {
+    if (value == null) {
+      return true;
+    }
+
+    if (value is TextCellValue) {
+      return value.value.text.trim().isEmpty;
+    }
+
     return false;
   }
 
@@ -658,7 +627,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       return DoubleCellValue(value.toDouble());
     }
 
-    return TextCellValue(value?.toString() ?? '');
+    if (value == null) {
+      return TextCellValue('');
+    }
+
+    return TextCellValue(value.toString());
   }
 
   String _columnLetter(int index) {
@@ -806,4 +779,4 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 }
-```0
+```1
