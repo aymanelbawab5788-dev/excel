@@ -281,8 +281,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       bottomBorder: thinBorder,
     );
 
-    const title =
-        'اجمالي مسحوبات قسم نقل بورسعيد عن شهر اغسطس الفترة من 1/8/2026 الي 31/8/2026';
+    const title = 'اجمالي مسحوبات قسم نقل بورسعيد';
 
     sheet.merge(
       CellIndex.indexByString('A1'),
