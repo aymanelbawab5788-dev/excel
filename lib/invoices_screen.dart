@@ -1,8 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:excel/excel.dart';
+import 'package:excel/excel.dart' hide Border, BorderStyle;
+import 'package:excel/excel.dart' as ex;
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart' hide Border, BorderStyle;
+import 'package:flutter/material.dart';
 import 'package:universal_html/html.dart' as html;
 
 class InvoicesScreen extends StatefulWidget {
@@ -47,7 +48,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       final bytes = await file.readAsBytes();
       final output = await _processFile(bytes);
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _preparedFile = output;
@@ -55,7 +58,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         _status = 'تم تجهيز الملف بنجاح، اضغط تصدير الملف';
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _isProcessing = false;
@@ -89,7 +94,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
     final rows = sourceSheet.rows;
 
-    final headers = <String, int>{};
+    final Map<String, int> headers = {};
 
     for (int column = 0; column < rows.first.length; column++) {
       final value = _cellText(rows.first[column]).trim();
@@ -99,51 +104,75 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       }
     }
 
-    final dateIndex = _findHeader(headers, [
-      'تاريخ الفاتورة',
-      'التاريخ',
-      'تاريخ',
-    ]);
+    final dateIndex = _findHeader(
+      headers,
+      [
+        'تاريخ الفاتورة',
+        'التاريخ',
+        'تاريخ',
+      ],
+    );
 
-    final invoiceIndex = _findHeader(headers, [
-      'رقم الفاتورة',
-      'رقم فاتورة',
-      'الفاتورة',
-    ]);
+    final invoiceIndex = _findHeader(
+      headers,
+      [
+        'رقم الفاتورة',
+        'رقم فاتورة',
+        'الفاتورة',
+      ],
+    );
 
-    final solarQuantityIndex = _findHeader(headers, [
-      'كمية سولار',
-      'سولار',
-    ]);
+    final solarQuantityIndex = _findHeader(
+      headers,
+      [
+        'كمية سولار',
+        'سولار',
+      ],
+    );
 
-    final solarPriceIndex = _findHeader(headers, [
-      'سعر سولار',
-      'سعر السولار',
-    ]);
+    final solarPriceIndex = _findHeader(
+      headers,
+      [
+        'سعر سولار',
+        'سعر السولار',
+      ],
+    );
 
-    final quantity92Index = _findHeader(headers, [
-      'كمية بنزين 92',
-      'كمية بنزين92',
-      'بنزين 92',
-    ]);
+    final quantity92Index = _findHeader(
+      headers,
+      [
+        'كمية بنزين 92',
+        'كمية بنزين92',
+        'بنزين 92',
+      ],
+    );
 
-    final price92Index = _findHeader(headers, [
-      'سعر بنزين 92',
-      'سعر بنزين92',
-      'سعر 92',
-    ]);
+    final price92Index = _findHeader(
+      headers,
+      [
+        'سعر بنزين 92',
+        'سعر بنزين92',
+        'سعر 92',
+      ],
+    );
 
-    final quantity95Index = _findHeader(headers, [
-      'كمية بنزين 95',
-      'كمية بنزين95',
-      'بنزين 95',
-    ]);
+    final quantity95Index = _findHeader(
+      headers,
+      [
+        'كمية بنزين 95',
+        'كمية بنزين95',
+        'بنزين 95',
+      ],
+    );
 
-    final price95Index = _findHeader(headers, [
-      'سعر بنزين 95',
-      'سعر بنزين95',
-      'سعر 95',
-    ]);
+    final price95Index = _findHeader(
+      headers,
+      [
+        'سعر بنزين 95',
+        'سعر بنزين95',
+        'سعر 95',
+      ],
+    );
 
     if (dateIndex == -1 ||
         invoiceIndex == -1 ||
@@ -169,16 +198,16 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     final sheet = output['فواتير'];
     sheet.isRTL = true;
 
-    final thinBorder = Border(
-      borderStyle: BorderStyle.Thin,
-      borderColorHex: 'BFBFBF',
+    final thinBorder = ex.Border(
+      borderStyle: ex.BorderStyle.Thin,
+      borderColorHex: ExcelColor.fromHexString('BFBFBF'),
     );
 
     final titleStyle = CellStyle(
       fontFamily: getFontFamily(FontFamily.Calibri),
       fontSize: 16,
       bold: true,
-      fontColorHex: ExcelColor.white,
+      fontColorHex: ExcelColor.fromHexString('FFFFFF'),
       backgroundColorHex: ExcelColor.fromHexString('000000'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
@@ -188,11 +217,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       fontFamily: getFontFamily(FontFamily.Calibri),
       fontSize: 11,
       bold: true,
-      fontColorHex: ExcelColor.black,
+      fontColorHex: ExcelColor.fromHexString('000000'),
       backgroundColorHex: ExcelColor.fromHexString('D9D9D9'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
-      wrap: TextWrapping.WrapText,
+      textWrapping: TextWrapping.WrapText,
       leftBorder: thinBorder,
       rightBorder: thinBorder,
       topBorder: thinBorder,
@@ -203,6 +232,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       fontFamily: getFontFamily(FontFamily.Calibri),
       fontSize: 11,
       bold: true,
+      fontColorHex: ExcelColor.fromHexString('000000'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
       leftBorder: thinBorder,
@@ -215,7 +245,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       fontFamily: getFontFamily(FontFamily.Calibri),
       fontSize: 11,
       bold: true,
-      fontColorHex: ExcelColor.white,
+      fontColorHex: ExcelColor.fromHexString('FFFFFF'),
       backgroundColorHex: ExcelColor.fromHexString('595959'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
@@ -229,7 +259,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       fontFamily: getFontFamily(FontFamily.Calibri),
       fontSize: 11,
       bold: true,
-      fontColorHex: ExcelColor.white,
+      fontColorHex: ExcelColor.fromHexString('FFFFFF'),
       backgroundColorHex: ExcelColor.fromHexString('1F4E78'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
@@ -288,7 +318,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
     sheet.setRowHeight(1, 24);
 
-    final dataRows = <List<CellValue>>[];
+    final List<List<CellValue>> dataRows = [];
 
     for (int rowIndex = 1; rowIndex < rows.length; rowIndex++) {
       final row = rows[rowIndex];
@@ -421,7 +451,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           rowIndex: totalRow - 1,
         ),
         FormulaCellValue(
-          'SUM(${columnLetter}3:${columnLetter}$lastDataRow)',
+          'SUM($columnLetter$3:$columnLetter\$$lastDataRow)',
         ),
         cellStyle: totalStyle,
       );
@@ -431,7 +461,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
     final summaryRow = totalRow + 1;
 
-    final summaryValues = <int, CellValue>{
+    final Map<int, CellValue> summaryValues = {
       1: TextCellValue('سولار'),
       2: FormulaCellValue('C$totalRow'),
       4: TextCellValue('بنزين 92'),
@@ -546,7 +576,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     final value = cell.value!;
 
     if (value is TextCellValue) {
-      return value.value.text;
+      return value.value.text ?? '';
     }
 
     return value.toString();
@@ -586,7 +616,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     }
 
     if (value is TextCellValue) {
-      final text = value.value.text
+      final rawText = value.value.text ?? '';
+
+      final text = rawText
           .replaceAll(',', '')
           .replaceAll('٬', '')
           .replaceAll('،', '.')
@@ -604,7 +636,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     }
 
     if (value is TextCellValue) {
-      return value.value.text.trim().isEmpty;
+      final text = value.value.text ?? '';
+      return text.trim().isEmpty;
     }
 
     return false;
@@ -759,9 +792,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   ),
                   const SizedBox(height: 18),
                   FilledButton.icon(
-                    onPressed: _preparedFile == null
-                        ? null
-                        : _exportFile,
+                    onPressed:
+                        _preparedFile == null ? null : _exportFile,
                     icon: const Icon(Icons.download_rounded),
                     label: const Text('تصدير الملف'),
                     style: FilledButton.styleFrom(
@@ -779,4 +811,3 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 }
-```1
