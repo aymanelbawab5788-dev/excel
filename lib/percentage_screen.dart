@@ -25,13 +25,15 @@ class _PercentageScreenState extends State<PercentageScreen> {
   String _status = 'ارفع ملف Excel للبدء';
 
   // ===== ألوان التنسيق الاحترافي (لوحة ألوان محدودة) =====
-  static const String _kPrimaryColor = '1F3864'; // كحلي غامق - العنوان
-  static const String _kHeaderColor = '2E5395'; // أزرق متوسط - رأس الجدول
-  static const String _kHeaderFontColor = 'FFFFFF'; // أبيض
-  static const String _kAltRowColor = 'F2F2F2'; // رمادي فاتح جدًا
-  static const String _kBorderColor = 'BFBFBF'; // رمادي للحدود
-  static const String _kStatusExceedColor = 'FCE4E4'; // أحمر فاتح للحالة "متجاوز"
-  static const String _kStatusOkColor = 'E2F0D9'; // أخضر فاتح للحالة "طبيعي"
+  // ملحوظة: لازم قيمة ARGB كاملة (8 خانات مع alpha)، وإلا الباكدج
+  // بيتلخبط بين الألوان وبيسقّط بعضها من ملف الإكسل النهائي.
+  static const String _kPrimaryColor = 'FF1F3864'; // كحلي غامق - العنوان
+  static const String _kHeaderColor = 'FF2E5395'; // أزرق متوسط - رأس الجدول
+  static const String _kHeaderFontColor = 'FFFFFFFF'; // أبيض
+  static const String _kAltRowColor = 'FFF2F2F2'; // رمادي فاتح جدًا
+  static const String _kBorderColor = 'FFBFBFBF'; // رمادي للحدود
+  static const String _kStatusExceedColor = 'FFFCE4E4'; // أحمر فاتح للحالة "متجاوز"
+  static const String _kStatusOkColor = 'FFE2F0D9'; // أخضر فاتح للحالة "طبيعي"
 
   Future<void> _pickFile() async {
     try {
@@ -615,7 +617,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
     );
 
     final backgroundHex = highlightColorHex ??
-        (isAltRow ? _kAltRowColor : 'FFFFFF');
+        (isAltRow ? _kAltRowColor : 'FFFFFFFF');
 
     cell.cellStyle = CellStyle(
       backgroundColorHex: ExcelColor.fromHexString(backgroundHex),
