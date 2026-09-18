@@ -451,7 +451,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           rowIndex: totalRow - 1,
         ),
         FormulaCellValue(
-  'SUM(${columnLetter}3:${columnLetter}$lastDataRow)',
+  'SUM(' + columnLetter + '3:' + columnLetter + lastDataRow.toString() + ')',
 ),
         cellStyle: totalStyle,
       );
