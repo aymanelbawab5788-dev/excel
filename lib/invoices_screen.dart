@@ -82,16 +82,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   Future<Uint8List> _processFile(Uint8List inputBytes) async {
     final inputExcel = Excel.decodeBytes(inputBytes);
 
-    Sheet? sourceSheet;
-
-    if (inputExcel.tables.containsKey('فواتير')) {
-      sourceSheet = inputExcel['فواتير'];
-    } else if (inputExcel.tables.isNotEmpty) {
-      sourceSheet = inputExcel[inputExcel.tables.keys.first];
-    }
+    // ملف المصدر يحتوي على شيتين.
+    // البيانات المطلوبة موجودة في شيت Report.
+    final sourceSheet = inputExcel.tables['Report'];
 
     if (sourceSheet == null || sourceSheet.maxRows < 2) {
-      throw Exception('لم يتم العثور على بيانات الفواتير');
+      throw Exception(
+        'لم يتم العثور على بيانات الفواتير في شيت Report',
+      );
     }
 
     final rows = sourceSheet.rows;
@@ -185,7 +183,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         quantity95Index == -1 ||
         price95Index == -1) {
       throw Exception(
-        'لم يتم العثور على أعمدة الفواتير المطلوبة',
+        'لم يتم العثور على أعمدة الفواتير المطلوبة في شيت Report',
       );
     }
 
@@ -198,9 +196,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     }
 
     final sheet = output['فواتير'];
-    // ملحوظة: sheet.isRTL بتتقبل بس مش دايمًا بتتصدّر فعليًا جوه XML
-    // الملف النهائي (bug في الباكدج). سايبينها احتياطيًا، وبنعمل fix
-    // إضافي بعد التصدير (_forceRtl) يضمن الاتجاه صح مهما حصل.
+
     sheet.isRTL = true;
 
     final thinBorder = ex.Border(
@@ -208,8 +204,6 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       borderColorHex: ExcelColor.fromHexString('FFBFBFBF'),
     );
 
-    // ملحوظة مهمة: لازم قيمة ARGB كاملة (8 خانات مع alpha)، وإلا
-    // الباكدج بيتلخبط بين الألوان وبيسقّط بعضها من الملف النهائي.
     final titleStyle = CellStyle(
       fontFamily: getFontFamily(FontFamily.Calibri),
       fontSize: 16,
@@ -452,15 +446,20 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     for (final column in sumColumns) {
       final columnLetter = _columnLetter(column);
 
+      final formula =
+          'SUM(' +
+          columnLetter +
+          '3:' +
+          columnLetter +
+          lastDataRow.toString() +
+          ')';
+
       sheet.updateCell(
         CellIndex.indexByColumnRow(
           columnIndex: column,
           rowIndex: totalRow - 1,
         ),
-        FormulaCellValue(
-          'SUM($columnLetter'
-          '3:$columnLetter$lastDataRow)',
-        ),
+        FormulaCellValue(formula),
         cellStyle: totalStyle,
       );
     }
@@ -516,24 +515,22 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       throw Exception('تعذر إنشاء ملف Excel');
     }
 
-    // sheet.isRTL مش دايمًا بتتصدّر فعليًا في ملف xlsx النهائي، فبنجبر
-    // الاتجاه يبقى من اليمين لليسار بتعديل XML الداخلي يدويًا بعد التصدير.
     return _forceRtl(Uint8List.fromList(encoded));
   }
 
-  /// بيفك ضغط ملف xlsx (هو أصلاً zip)، يدور على كل ملفات الشيتات
-  /// (xl/worksheets/sheetN.xml)، ويحقن الخاصية `rightToLeft="1"` جوه
-  /// تاج `<sheetView>` بتاع كل شيت، وبعدين يضغط الملف تاني بنفس المحتوى.
   Uint8List _forceRtl(Uint8List xlsxBytes) {
     final archive = ZipDecoder().decodeBytes(xlsxBytes);
     final newArchive = Archive();
 
     for (final file in archive.files) {
-      if (!file.isFile) continue;
+      if (!file.isFile) {
+        continue;
+      }
 
       final content = file.content as List<int>;
 
-      final isWorksheetXml = file.name.startsWith('xl/worksheets/') &&
+      final isWorksheetXml =
+          file.name.startsWith('xl/worksheets/') &&
           file.name.endsWith('.xml');
 
       if (isWorksheetXml) {
@@ -573,33 +570,40 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     final openTag = RegExp(r'<sheetView([^>]*)>');
 
     if (selfClosingTag.hasMatch(xml)) {
-      return xml.replaceFirstMapped(selfClosingTag, (match) {
-        final attrs = match.group(1) ?? '';
+      return xml.replaceFirstMapped(
+        selfClosingTag,
+        (match) {
+          final attrs = match.group(1) ?? '';
 
-        if (attrs.contains('rightToLeft')) {
-          return match.group(0)!;
-        }
+          if (attrs.contains('rightToLeft')) {
+            return match.group(0)!;
+          }
 
-        return '<sheetView$attrs rightToLeft="1"/>';
-      });
+          return '<sheetView$attrs rightToLeft="1"/>';
+        },
+      );
     }
 
     if (openTag.hasMatch(xml)) {
-      return xml.replaceFirstMapped(openTag, (match) {
-        final attrs = match.group(1) ?? '';
+      return xml.replaceFirstMapped(
+        openTag,
+        (match) {
+          final attrs = match.group(1) ?? '';
 
-        if (attrs.contains('rightToLeft')) {
-          return match.group(0)!;
-        }
+          if (attrs.contains('rightToLeft')) {
+            return match.group(0)!;
+          }
 
-        return '<sheetView$attrs rightToLeft="1">';
-      });
+          return '<sheetView$attrs rightToLeft="1">';
+        },
+      );
     }
 
     if (xml.contains('<sheetViews>')) {
       return xml.replaceFirst(
         '<sheetViews>',
-        '<sheetViews><sheetView rightToLeft="1" workbookViewId="0"/>',
+        '<sheetViews>'
+            '<sheetView rightToLeft="1" workbookViewId="0"/>',
       );
     }
 
