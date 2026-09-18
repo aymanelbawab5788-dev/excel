@@ -230,6 +230,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
     Sheet report,
     Map<String, Map<String, dynamic>> detailsMap,
   ) {
+    // الشيت عربي، فلازم يكون الاتجاه من اليمين لليسار
+    output.isRTL = true;
+
     const headers = [
       'م',
       'رقم السجل',
@@ -328,7 +331,6 @@ class _PercentageScreenState extends State<PercentageScreen> {
     num totalSmartCard = 0;
     num totalGas = 0;
     num totalQuantitySum = 0;
-    num totalDistance = 0;
 
     for (var i = 1; i < rows.length; i++) {
       final row = rows[i];
@@ -394,13 +396,16 @@ class _PercentageScreenState extends State<PercentageScreen> {
       final status =
           excessPercentage > 0 ? 'متجاوز' : 'طبيعي';
 
+      // تقريب النسبة ونسبة التجاوز لأقرب رقم عشري واحد للعرض في التقرير
+      final displayActualPercentage = _roundTo1(actualPercentage);
+      final displayExcessPercentage = _roundTo1(excessPercentage);
+
       totalPortSaid += portSaid;
       totalIsmailia += ismailia;
       totalSuez += suez;
       totalSmartCard += smartCard;
       totalGas += gas;
       totalQuantitySum += totalQuantity;
-      totalDistance += distance;
 
       final isAltRow = sequence.isOdd;
 
@@ -512,7 +517,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         13,
         outputRow,
-        actualPercentage,
+        displayActualPercentage,
         isAltRow: isAltRow,
       );
 
@@ -529,7 +534,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         15,
         outputRow,
-        excessPercentage > 0 ? excessPercentage : null,
+        excessPercentage > 0 ? displayExcessPercentage : null,
         isAltRow: isAltRow,
       );
 
@@ -638,7 +643,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       12,
       outputRow,
-      totalDistance,
+      null,
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -650,7 +655,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         outputRow,
         null,
         highlightColorHex: _kTotalsColor,
-      bold: true,
+        bold: true,
       );
     }
   }
@@ -723,6 +728,11 @@ class _PercentageScreenState extends State<PercentageScreen> {
           value.toString().replaceAll(',', '').trim(),
         ) ??
         0;
+  }
+
+  // تقريب لأقرب رقم عشري واحد (خانة عشرية واحدة)
+  double _roundTo1(num value) {
+    return (value * 10).round() / 10;
   }
 
   void _setValue(
