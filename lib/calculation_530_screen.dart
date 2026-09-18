@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:excel/excel.dart' as ex;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -56,6 +58,10 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         outputExcel.delete(defaultSheet);
       }
 
+      // ملحوظة: sheet.isRTL بتتقبل في الكود لكن مش دايمًا بتتصدّر فعليًا
+      // جوه XML الملف النهائي (bug في الباكدج). سايبينها هنا احتياطيًا،
+      // وبنعمل fix إضافي بعد التصدير (_forceRtl) يضمن ظهور الاتجاه صح
+      // حتى لو الباكدج فشل يكتبها.
       sheet.isRTL = true;
 
       // =========================
@@ -486,14 +492,21 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
       // encode() بترجّع نفس البايتات بالظبط من غير ما تستدعي أي حاجة
       // خاصة بالتحميل، فمفيش تحميل إلا لما إحنا نستدعي _downloadFile()
       // بنفسنا (زر "تصدير الملف").
-      final outputBytes = outputExcel.encode();
+      final rawOutputBytes = outputExcel.encode();
 
-      if (outputBytes == null) {
+      if (rawOutputBytes == null) {
         throw Exception('فشل إنشاء ملف Excel');
       }
 
+      // sheet.isRTL مش دايمًا بتتصدّر فعليًا في ملف xlsx النهائي (bug
+      // في الباكدج)، فبنجبر الاتجاه يبقى من اليمين لليسار بتعديل XML
+      // الداخلي للملف يدويًا بعد التصدير مباشرة.
+      final outputBytes = _forceRtl(
+        Uint8List.fromList(rawOutputBytes),
+      );
+
       setState(() {
-        _preparedFile = Uint8List.fromList(outputBytes);
+        _preparedFile = outputBytes;
         _processing = false;
         _status = 'تم تجهيز الملف بنجاح — اضغط تصدير الملف';
       });
@@ -504,6 +517,94 @@ class _Calculation530ScreenState extends State<Calculation530Screen> {
         _status = 'حدث خطأ: $e';
       });
     }
+  }
+
+  /// بيفك ضغط ملف xlsx (هو أصلاً zip)، يدور على كل ملفات الشيتات
+  /// (xl/worksheets/sheetN.xml)، ويحقن الخاصية `rightToLeft="1"` جوه
+  /// تاج `<sheetView>` بتاع كل شيت، وبعدين يضغط الملف تاني بنفس المحتوى.
+  /// ده حل بديل ضروري لأن `sheet.isRTL` في الباكدج مش دايمًا بتتصدّر.
+  Uint8List _forceRtl(Uint8List xlsxBytes) {
+    final archive = ZipDecoder().decodeBytes(xlsxBytes);
+    final newArchive = Archive();
+
+    for (final file in archive.files) {
+      if (!file.isFile) continue;
+
+      final content = file.content as List<int>;
+
+      final isWorksheetXml = file.name.startsWith('xl/worksheets/') &&
+          file.name.endsWith('.xml');
+
+      if (isWorksheetXml) {
+        final xmlString = utf8.decode(content);
+        final updatedXml = _injectRightToLeft(xmlString);
+        final updatedBytes = utf8.encode(updatedXml);
+
+        newArchive.addFile(
+          ArchiveFile(
+            file.name,
+            updatedBytes.length,
+            updatedBytes,
+          ),
+        );
+      } else {
+        newArchive.addFile(
+          ArchiveFile(
+            file.name,
+            content.length,
+            content,
+          ),
+        );
+      }
+    }
+
+    final rezipped = ZipEncoder().encode(newArchive);
+
+    if (rezipped == null) {
+      // لو فشل إعادة الضغط لأي سبب، نرجّع الملف الأصلي بدل ما نكسر التصدير
+      return xlsxBytes;
+    }
+
+    return Uint8List.fromList(rezipped);
+  }
+
+  String _injectRightToLeft(String xml) {
+    final selfClosingTag = RegExp(r'<sheetView([^>]*)/>');
+    final openTag = RegExp(r'<sheetView([^>]*)>');
+
+    if (selfClosingTag.hasMatch(xml)) {
+      return xml.replaceFirstMapped(selfClosingTag, (match) {
+        final attrs = match.group(1) ?? '';
+
+        if (attrs.contains('rightToLeft')) {
+          return match.group(0)!;
+        }
+
+        return '<sheetView$attrs rightToLeft="1"/>';
+      });
+    }
+
+    if (openTag.hasMatch(xml)) {
+      return xml.replaceFirstMapped(openTag, (match) {
+        final attrs = match.group(1) ?? '';
+
+        if (attrs.contains('rightToLeft')) {
+          return match.group(0)!;
+        }
+
+        return '<sheetView$attrs rightToLeft="1">';
+      });
+    }
+
+    // مفيش تاج sheetView خالص (نادر) - نضيف واحد افتراضي
+    if (xml.contains('<sheetViews>')) {
+      return xml.replaceFirst(
+        '<sheetViews>',
+        '<sheetViews><sheetView rightToLeft="1" workbookViewId="0"/>',
+      );
+    }
+
+    return xml;
   }
 
   void _exportFile() {
