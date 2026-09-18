@@ -24,6 +24,15 @@ class _PercentageScreenState extends State<PercentageScreen> {
 
   String _status = 'ارفع ملف Excel للبدء';
 
+  // ===== ألوان التنسيق الاحترافي (لوحة ألوان محدودة) =====
+  static const String _kPrimaryColor = '1F3864'; // كحلي غامق - العنوان
+  static const String _kHeaderColor = '2E5395'; // أزرق متوسط - رأس الجدول
+  static const String _kHeaderFontColor = 'FFFFFF'; // أبيض
+  static const String _kAltRowColor = 'F2F2F2'; // رمادي فاتح جدًا
+  static const String _kBorderColor = 'BFBFBF'; // رمادي للحدود
+  static const String _kStatusExceedColor = 'FCE4E4'; // أحمر فاتح للحالة "متجاوز"
+  static const String _kStatusOkColor = 'E2F0D9'; // أخضر فاتح للحالة "طبيعي"
+
   Future<void> _pickFile() async {
     try {
       final file = await FilePicker.pickFile(
@@ -238,24 +247,65 @@ class _PercentageScreenState extends State<PercentageScreen> {
       'الحالة',
     ];
 
+    // ===== صف العنوان =====
     output.merge(
       CellIndex.indexByString('A1'),
       CellIndex.indexByString('Q1'),
     );
 
-    output.cell(
+    final titleCell = output.cell(
       CellIndex.indexByString('A1'),
-    ).value = TextCellValue(
-      'كشف نسبة السولار عن الشهر',
     );
 
+    titleCell.value = TextCellValue('كشف نسبة');
+
+    titleCell.cellStyle = CellStyle(
+      backgroundColorHex: ExcelColor.fromHexString(_kPrimaryColor),
+      fontColorHex: ExcelColor.fromHexString(_kHeaderFontColor),
+      bold: true,
+      fontSize: 16,
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+    );
+
+    output.setRowHeight(0, 28);
+
+    // ===== صف رؤوس الأعمدة =====
+    output.setRowHeight(1, 22);
+
     for (var i = 0; i < headers.length; i++) {
-      output.cell(
+      final cell = output.cell(
         CellIndex.indexByColumnRow(
           columnIndex: i,
           rowIndex: 1,
         ),
-      ).value = TextCellValue(headers[i]);
+      );
+
+      cell.value = TextCellValue(headers[i]);
+
+      cell.cellStyle = CellStyle(
+        backgroundColorHex: ExcelColor.fromHexString(_kHeaderColor),
+        fontColorHex: ExcelColor.fromHexString(_kHeaderFontColor),
+        bold: true,
+        horizontalAlign: HorizontalAlign.Center,
+        verticalAlign: VerticalAlign.Center,
+        topBorder: Border(
+          borderStyle: BorderStyle.Thin,
+          borderColorHex: ExcelColor.fromHexString(_kBorderColor),
+        ),
+        bottomBorder: Border(
+          borderStyle: BorderStyle.Thin,
+          borderColorHex: ExcelColor.fromHexString(_kBorderColor),
+        ),
+        leftBorder: Border(
+          borderStyle: BorderStyle.Thin,
+          borderColorHex: ExcelColor.fromHexString(_kBorderColor),
+        ),
+        rightBorder: Border(
+          borderStyle: BorderStyle.Thin,
+          borderColorHex: ExcelColor.fromHexString(_kBorderColor),
+        ),
+      );
     }
 
     final rows = report.rows;
@@ -333,21 +383,22 @@ class _PercentageScreenState extends State<PercentageScreen> {
       final status =
           excessPercentage > 0 ? 'متجاوز' : 'طبيعي';
 
+      final isAltRow = sequence.isOdd;
 
-      output
-          .cell(
-            CellIndex.indexByColumnRow(
-              columnIndex: 0,
-              rowIndex: outputRow,
-            ),
-          )
-          .value = IntCellValue(sequence);
+      _setValue(
+        output,
+        0,
+        outputRow,
+        sequence,
+        isAltRow: isAltRow,
+      );
 
       _setValue(
         output,
         1,
         outputRow,
         _value(row, reportHeaders['رقم السجل']),
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -355,6 +406,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         2,
         outputRow,
         vehicle,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -362,6 +414,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         3,
         outputRow,
         _value(row, reportHeaders['الأحرف']),
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -369,6 +422,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         4,
         outputRow,
         portSaid,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -376,6 +430,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         5,
         outputRow,
         ismailia,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -383,6 +438,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         6,
         outputRow,
         suez,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -390,6 +446,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         7,
         outputRow,
         smartCard,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -397,6 +454,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         8,
         outputRow,
         gas,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -404,6 +462,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         9,
         outputRow,
         totalQuantity,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -411,6 +470,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         10,
         outputRow,
         startOdometer,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -418,6 +478,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         11,
         outputRow,
         endOdometer,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -425,6 +486,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         12,
         outputRow,
         distance,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -432,6 +494,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         13,
         outputRow,
         actualPercentage,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -439,13 +502,16 @@ class _PercentageScreenState extends State<PercentageScreen> {
         14,
         outputRow,
         standardPercentage,
+        isAltRow: isAltRow,
       );
 
+      // نسبة التجاوز: تظهر فقط لو موجبة، وإلا تبقى الخلية فارغة
       _setValue(
         output,
         15,
         outputRow,
-        excessPercentage,
+        excessPercentage > 0 ? excessPercentage : null,
+        isAltRow: isAltRow,
       );
 
       _setValue(
@@ -453,6 +519,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
         16,
         outputRow,
         status,
+        isAltRow: isAltRow,
+        highlightColorHex:
+            status == 'متجاوز' ? _kStatusExceedColor : _kStatusOkColor,
       );
 
       sequence++;
@@ -534,12 +603,39 @@ class _PercentageScreenState extends State<PercentageScreen> {
     Sheet sheet,
     int column,
     int row,
-    dynamic value,
-  ) {
+    dynamic value, {
+    bool isAltRow = false,
+    String? highlightColorHex,
+  }) {
     final cell = sheet.cell(
       CellIndex.indexByColumnRow(
         columnIndex: column,
         rowIndex: row,
+      ),
+    );
+
+    final backgroundHex = highlightColorHex ??
+        (isAltRow ? _kAltRowColor : 'FFFFFF');
+
+    cell.cellStyle = CellStyle(
+      backgroundColorHex: ExcelColor.fromHexString(backgroundHex),
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+      topBorder: Border(
+        borderStyle: BorderStyle.Thin,
+        borderColorHex: ExcelColor.fromHexString(_kBorderColor),
+      ),
+      bottomBorder: Border(
+        borderStyle: BorderStyle.Thin,
+        borderColorHex: ExcelColor.fromHexString(_kBorderColor),
+      ),
+      leftBorder: Border(
+        borderStyle: BorderStyle.Thin,
+        borderColorHex: ExcelColor.fromHexString(_kBorderColor),
+      ),
+      rightBorder: Border(
+        borderStyle: BorderStyle.Thin,
+        borderColorHex: ExcelColor.fromHexString(_kBorderColor),
       ),
     );
 
