@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'percentage_screen.dart';
 import 'calculation_530_screen.dart';
+import 'invoices_screen.dart';
 
 void main() {
   runApp(const ExcelFormatterApp());
@@ -44,7 +45,6 @@ class HomePage extends StatelessWidget {
       description: 'معالجة وتنسيق ملفات الفواتير',
       icon: Icons.receipt_long_rounded,
     ),
-    // أضف العمليات الجديدة هنا لاحقًا.
   ];
 
   void _openSection(BuildContext context, String title) {
@@ -63,6 +63,16 @@ class HomePage extends StatelessWidget {
         context,
         MaterialPageRoute(
           builder: (_) => const Calculation530Screen(),
+        ),
+      );
+      return;
+    }
+
+    if (title == 'الفواتير') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const InvoicesScreen(),
         ),
       );
       return;
@@ -218,8 +228,8 @@ class _ExcelActionCard extends StatelessWidget {
                   color: Colors.blue.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
-                  Icons.percent_rounded,
+                child: Icon(
+                  section.icon,
                   size: 30,
                   color: Colors.blue,
                 ),
