@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Border, BorderStyle;
 import 'package:universal_html/html.dart' as html;
 
 class PercentageScreen extends StatefulWidget {
