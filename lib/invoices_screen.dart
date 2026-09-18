@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:excel/excel.dart' hide Border, BorderStyle;
 import 'package:excel/excel.dart' as ex;
 import 'package:file_picker/file_picker.dart';
@@ -196,19 +198,24 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     }
 
     final sheet = output['فواتير'];
+    // ملحوظة: sheet.isRTL بتتقبل بس مش دايمًا بتتصدّر فعليًا جوه XML
+    // الملف النهائي (bug في الباكدج). سايبينها احتياطيًا، وبنعمل fix
+    // إضافي بعد التصدير (_forceRtl) يضمن الاتجاه صح مهما حصل.
     sheet.isRTL = true;
 
     final thinBorder = ex.Border(
       borderStyle: ex.BorderStyle.Thin,
-      borderColorHex: ExcelColor.fromHexString('BFBFBF'),
+      borderColorHex: ExcelColor.fromHexString('FFBFBFBF'),
     );
 
+    // ملحوظة مهمة: لازم قيمة ARGB كاملة (8 خانات مع alpha)، وإلا
+    // الباكدج بيتلخبط بين الألوان وبيسقّط بعضها من الملف النهائي.
     final titleStyle = CellStyle(
       fontFamily: getFontFamily(FontFamily.Calibri),
       fontSize: 16,
       bold: true,
-      fontColorHex: ExcelColor.fromHexString('FFFFFF'),
-      backgroundColorHex: ExcelColor.fromHexString('000000'),
+      fontColorHex: ExcelColor.fromHexString('FFFFFFFF'),
+      backgroundColorHex: ExcelColor.fromHexString('FF000000'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
     );
@@ -217,8 +224,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       fontFamily: getFontFamily(FontFamily.Calibri),
       fontSize: 11,
       bold: true,
-      fontColorHex: ExcelColor.fromHexString('000000'),
-      backgroundColorHex: ExcelColor.fromHexString('D9D9D9'),
+      fontColorHex: ExcelColor.fromHexString('FF000000'),
+      backgroundColorHex: ExcelColor.fromHexString('FFD9D9D9'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
       textWrapping: TextWrapping.WrapText,
@@ -232,7 +239,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       fontFamily: getFontFamily(FontFamily.Calibri),
       fontSize: 11,
       bold: true,
-      fontColorHex: ExcelColor.fromHexString('000000'),
+      fontColorHex: ExcelColor.fromHexString('FF000000'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
       leftBorder: thinBorder,
@@ -245,8 +252,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       fontFamily: getFontFamily(FontFamily.Calibri),
       fontSize: 11,
       bold: true,
-      fontColorHex: ExcelColor.fromHexString('FFFFFF'),
-      backgroundColorHex: ExcelColor.fromHexString('595959'),
+      fontColorHex: ExcelColor.fromHexString('FFFFFFFF'),
+      backgroundColorHex: ExcelColor.fromHexString('FF595959'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
       leftBorder: thinBorder,
@@ -259,8 +266,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       fontFamily: getFontFamily(FontFamily.Calibri),
       fontSize: 11,
       bold: true,
-      fontColorHex: ExcelColor.fromHexString('FFFFFF'),
-      backgroundColorHex: ExcelColor.fromHexString('1F4E78'),
+      fontColorHex: ExcelColor.fromHexString('FFFFFFFF'),
+      backgroundColorHex: ExcelColor.fromHexString('FF1F4E78'),
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
       leftBorder: thinBorder,
@@ -451,8 +458,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           rowIndex: totalRow - 1,
         ),
         FormulaCellValue(
-  'SUM(' + columnLetter + '3:' + columnLetter + lastDataRow.toString() + ')',
-),
+          'SUM($columnLetter'
+          '3:$columnLetter$lastDataRow)',
+        ),
         cellStyle: totalStyle,
       );
     }
@@ -508,7 +516,94 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       throw Exception('تعذر إنشاء ملف Excel');
     }
 
-    return Uint8List.fromList(encoded);
+    // sheet.isRTL مش دايمًا بتتصدّر فعليًا في ملف xlsx النهائي، فبنجبر
+    // الاتجاه يبقى من اليمين لليسار بتعديل XML الداخلي يدويًا بعد التصدير.
+    return _forceRtl(Uint8List.fromList(encoded));
+  }
+
+  /// بيفك ضغط ملف xlsx (هو أصلاً zip)، يدور على كل ملفات الشيتات
+  /// (xl/worksheets/sheetN.xml)، ويحقن الخاصية `rightToLeft="1"` جوه
+  /// تاج `<sheetView>` بتاع كل شيت، وبعدين يضغط الملف تاني بنفس المحتوى.
+  Uint8List _forceRtl(Uint8List xlsxBytes) {
+    final archive = ZipDecoder().decodeBytes(xlsxBytes);
+    final newArchive = Archive();
+
+    for (final file in archive.files) {
+      if (!file.isFile) continue;
+
+      final content = file.content as List<int>;
+
+      final isWorksheetXml = file.name.startsWith('xl/worksheets/') &&
+          file.name.endsWith('.xml');
+
+      if (isWorksheetXml) {
+        final xmlString = utf8.decode(content);
+        final updatedXml = _injectRightToLeft(xmlString);
+        final updatedBytes = utf8.encode(updatedXml);
+
+        newArchive.addFile(
+          ArchiveFile(
+            file.name,
+            updatedBytes.length,
+            updatedBytes,
+          ),
+        );
+      } else {
+        newArchive.addFile(
+          ArchiveFile(
+            file.name,
+            content.length,
+            content,
+          ),
+        );
+      }
+    }
+
+    final rezipped = ZipEncoder().encode(newArchive);
+
+    if (rezipped == null) {
+      return xlsxBytes;
+    }
+
+    return Uint8List.fromList(rezipped);
+  }
+
+  String _injectRightToLeft(String xml) {
+    final selfClosingTag = RegExp(r'<sheetView([^>]*)/>');
+    final openTag = RegExp(r'<sheetView([^>]*)>');
+
+    if (selfClosingTag.hasMatch(xml)) {
+      return xml.replaceFirstMapped(selfClosingTag, (match) {
+        final attrs = match.group(1) ?? '';
+
+        if (attrs.contains('rightToLeft')) {
+          return match.group(0)!;
+        }
+
+        return '<sheetView$attrs rightToLeft="1"/>';
+      });
+    }
+
+    if (openTag.hasMatch(xml)) {
+      return xml.replaceFirstMapped(openTag, (match) {
+        final attrs = match.group(1) ?? '';
+
+        if (attrs.contains('rightToLeft')) {
+          return match.group(0)!;
+        }
+
+        return '<sheetView$attrs rightToLeft="1">';
+      });
+    }
+
+    if (xml.contains('<sheetViews>')) {
+      return xml.replaceFirst(
+        '<sheetViews>',
+        '<sheetViews><sheetView rightToLeft="1" workbookViewId="0"/>',
+      );
+    }
+
+    return xml;
   }
 
   Future<void> _exportFile() async {
