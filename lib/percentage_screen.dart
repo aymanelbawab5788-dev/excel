@@ -325,13 +325,6 @@ class _PercentageScreenState extends State<PercentageScreen> {
     var outputRow = 2;
     var sequence = 1;
 
-    num totalPortSaid = 0;
-    num totalIsmailia = 0;
-    num totalSuez = 0;
-    num totalSmartCard = 0;
-    num totalGas = 0;
-    num totalQuantitySum = 0;
-
     for (var i = 1; i < rows.length; i++) {
       final row = rows[i];
 
@@ -396,18 +389,10 @@ class _PercentageScreenState extends State<PercentageScreen> {
       final status =
           excessPercentage > 0 ? 'متجاوز' : 'طبيعي';
 
-      // تقريب النسبة ونسبة التجاوز لأقرب رقم عشري واحد للعرض في التقرير
-      final displayActualPercentage = _roundTo1(actualPercentage);
-      final displayExcessPercentage = _roundTo1(excessPercentage);
-
-      totalPortSaid += portSaid;
-      totalIsmailia += ismailia;
-      totalSuez += suez;
-      totalSmartCard += smartCard;
-      totalGas += gas;
-      totalQuantitySum += totalQuantity;
-
       final isAltRow = sequence.isOdd;
+
+      // رقم الصف الفعلي في شيت الإكسل (1-indexed) عشان نبني بيه المعادلات
+      final excelRow = outputRow + 1;
 
       _setValue(
         output,
@@ -485,7 +470,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         9,
         outputRow,
-        totalQuantity,
+        '=SUM(E$excelRow:I$excelRow)',
         isAltRow: isAltRow,
       );
 
@@ -509,7 +494,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         12,
         outputRow,
-        distance,
+        '=L$excelRow-K$excelRow',
         isAltRow: isAltRow,
       );
 
@@ -517,7 +502,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         13,
         outputRow,
-        displayActualPercentage,
+        '=IF(M$excelRow>0,ROUND(J$excelRow/M$excelRow*100,1),0)',
         isAltRow: isAltRow,
       );
 
@@ -534,7 +519,8 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         15,
         outputRow,
-        excessPercentage > 0 ? displayExcessPercentage : null,
+        '=IF((N$excelRow-(O$excelRow*1.5))>0,'
+            'ROUND(N$excelRow-(O$excelRow*1.5),1),"")',
         isAltRow: isAltRow,
       );
 
@@ -542,7 +528,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
         output,
         16,
         outputRow,
-        status,
+        '=IF((N$excelRow-(O$excelRow*1.5))>0,"متجاوز","طبيعي")',
         isAltRow: isAltRow,
         highlightColorHex:
             status == 'متجاوز' ? _kStatusExceedColor : _kStatusOkColor,
@@ -551,6 +537,9 @@ class _PercentageScreenState extends State<PercentageScreen> {
       sequence++;
       outputRow++;
     }
+
+    // آخر صف بيانات فعلي في الشيت (رقم صف بالإكسل 1-indexed)
+    final lastDataRow = outputRow;
 
     // ===== صف الإجماليات =====
     output.merge(
@@ -571,7 +560,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       4,
       outputRow,
-      totalPortSaid,
+      '=SUM(E3:E$lastDataRow)',
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -580,7 +569,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       5,
       outputRow,
-      totalIsmailia,
+      '=SUM(F3:F$lastDataRow)',
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -589,7 +578,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       6,
       outputRow,
-      totalSuez,
+      '=SUM(G3:G$lastDataRow)',
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -598,7 +587,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       7,
       outputRow,
-      totalSmartCard,
+      '=SUM(H3:H$lastDataRow)',
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -607,7 +596,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       8,
       outputRow,
-      totalGas,
+      '=SUM(I3:I$lastDataRow)',
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -616,7 +605,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
       output,
       9,
       outputRow,
-      totalQuantitySum,
+      '=SUM(J3:J$lastDataRow)',
       highlightColorHex: _kTotalsColor,
       bold: true,
     );
@@ -730,11 +719,6 @@ class _PercentageScreenState extends State<PercentageScreen> {
         0;
   }
 
-  // تقريب لأقرب رقم عشري واحد (خانة عشرية واحدة)
-  double _roundTo1(num value) {
-    return (value * 10).round() / 10;
-  }
-
   void _setValue(
     Sheet sheet,
     int column,
@@ -755,7 +739,10 @@ class _PercentageScreenState extends State<PercentageScreen> {
     // لو عكسنا الترتيب، مكتبة excel بتعمل reset للتنسيق تلقائيًا وقت
     // ما بتحدد صيغة الرقم (number format) للخلية، فيضيع اللون والحدود.
     if (value != null) {
-      if (value is int) {
+      if (value is String && value.startsWith('=')) {
+        // نص بيبدأ بـ "=" يتكتب كمعادلة إكسل حقيقية، مش كنص عادي
+        cell.value = FormulaCellValue(value.substring(1));
+      } else if (value is int) {
         cell.value = IntCellValue(value);
       } else if (value is double) {
         cell.value = DoubleCellValue(value);
