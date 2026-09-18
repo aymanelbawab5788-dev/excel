@@ -27,13 +27,14 @@ class _PercentageScreenState extends State<PercentageScreen> {
   // ===== ألوان التنسيق الاحترافي (لوحة ألوان محدودة) =====
   // ملحوظة: لازم قيمة ARGB كاملة (8 خانات مع alpha)، وإلا الباكدج
   // بيتلخبط بين الألوان وبيسقّط بعضها من ملف الإكسل النهائي.
-  static const String _kPrimaryColor = 'FF1F3864'; // كحلي غامق - العنوان
+  static const String _kPrimaryColor = 'FF000000'; // أسود - شريط العنوان
   static const String _kHeaderColor = 'FF2E5395'; // أزرق متوسط - رأس الجدول
   static const String _kHeaderFontColor = 'FFFFFFFF'; // أبيض
   static const String _kAltRowColor = 'FFF2F2F2'; // رمادي فاتح جدًا
   static const String _kBorderColor = 'FFBFBFBF'; // رمادي للحدود
   static const String _kStatusExceedColor = 'FFFCE4E4'; // أحمر فاتح للحالة "متجاوز"
   static const String _kStatusOkColor = 'FFE2F0D9'; // أخضر فاتح للحالة "طبيعي"
+  static const String _kTotalsColor = 'FFD9E2F3'; // أزرق فاتح - صف الإجماليات
 
   Future<void> _pickFile() async {
     try {
@@ -321,6 +322,14 @@ class _PercentageScreenState extends State<PercentageScreen> {
     var outputRow = 2;
     var sequence = 1;
 
+    num totalPortSaid = 0;
+    num totalIsmailia = 0;
+    num totalSuez = 0;
+    num totalSmartCard = 0;
+    num totalGas = 0;
+    num totalQuantitySum = 0;
+    num totalDistance = 0;
+
     for (var i = 1; i < rows.length; i++) {
       final row = rows[i];
 
@@ -384,6 +393,14 @@ class _PercentageScreenState extends State<PercentageScreen> {
 
       final status =
           excessPercentage > 0 ? 'متجاوز' : 'طبيعي';
+
+      totalPortSaid += portSaid;
+      totalIsmailia += ismailia;
+      totalSuez += suez;
+      totalSmartCard += smartCard;
+      totalGas += gas;
+      totalQuantitySum += totalQuantity;
+      totalDistance += distance;
 
       final isAltRow = sequence.isOdd;
 
@@ -529,6 +546,113 @@ class _PercentageScreenState extends State<PercentageScreen> {
       sequence++;
       outputRow++;
     }
+
+    // ===== صف الإجماليات =====
+    output.merge(
+      CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: outputRow),
+      CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: outputRow),
+    );
+
+    _setValue(
+      output,
+      0,
+      outputRow,
+      'الإجمالي',
+      highlightColorHex: _kTotalsColor,
+      bold: true,
+    );
+
+    _setValue(
+      output,
+      4,
+      outputRow,
+      totalPortSaid,
+      highlightColorHex: _kTotalsColor,
+      bold: true,
+    );
+
+    _setValue(
+      output,
+      5,
+      outputRow,
+      totalIsmailia,
+      highlightColorHex: _kTotalsColor,
+      bold: true,
+    );
+
+    _setValue(
+      output,
+      6,
+      outputRow,
+      totalSuez,
+      highlightColorHex: _kTotalsColor,
+      bold: true,
+    );
+
+    _setValue(
+      output,
+      7,
+      outputRow,
+      totalSmartCard,
+      highlightColorHex: _kTotalsColor,
+      bold: true,
+    );
+
+    _setValue(
+      output,
+      8,
+      outputRow,
+      totalGas,
+      highlightColorHex: _kTotalsColor,
+      bold: true,
+    );
+
+    _setValue(
+      output,
+      9,
+      outputRow,
+      totalQuantitySum,
+      highlightColorHex: _kTotalsColor,
+      bold: true,
+    );
+
+    _setValue(
+      output,
+      10,
+      outputRow,
+      null,
+      highlightColorHex: _kTotalsColor,
+      bold: true,
+    );
+
+    _setValue(
+      output,
+      11,
+      outputRow,
+      null,
+      highlightColorHex: _kTotalsColor,
+      bold: true,
+    );
+
+    _setValue(
+      output,
+      12,
+      outputRow,
+      totalDistance,
+      highlightColorHex: _kTotalsColor,
+      bold: true,
+    );
+
+    for (var col = 13; col <= 16; col++) {
+      _setValue(
+        output,
+        col,
+        outputRow,
+        null,
+        highlightColorHex: _kTotalsColor,
+      bold: true,
+      );
+    }
   }
 
   Map<String, int> _findHeaders(
@@ -608,6 +732,7 @@ class _PercentageScreenState extends State<PercentageScreen> {
     dynamic value, {
     bool isAltRow = false,
     String? highlightColorHex,
+    bool bold = false,
   }) {
     final cell = sheet.cell(
       CellIndex.indexByColumnRow(
@@ -616,11 +741,27 @@ class _PercentageScreenState extends State<PercentageScreen> {
       ),
     );
 
+    // مهم: لازم نحط القيمة الأول، وبعدين نطبّق التنسيق (الألوان والحدود).
+    // لو عكسنا الترتيب، مكتبة excel بتعمل reset للتنسيق تلقائيًا وقت
+    // ما بتحدد صيغة الرقم (number format) للخلية، فيضيع اللون والحدود.
+    if (value != null) {
+      if (value is int) {
+        cell.value = IntCellValue(value);
+      } else if (value is double) {
+        cell.value = DoubleCellValue(value);
+      } else if (value is num) {
+        cell.value = DoubleCellValue(value.toDouble());
+      } else {
+        cell.value = TextCellValue(value.toString());
+      }
+    }
+
     final backgroundHex = highlightColorHex ??
         (isAltRow ? _kAltRowColor : 'FFFFFFFF');
 
     cell.cellStyle = CellStyle(
       backgroundColorHex: ExcelColor.fromHexString(backgroundHex),
+      bold: bold,
       horizontalAlign: HorizontalAlign.Center,
       verticalAlign: VerticalAlign.Center,
       topBorder: Border(
@@ -640,20 +781,6 @@ class _PercentageScreenState extends State<PercentageScreen> {
         borderColorHex: ExcelColor.fromHexString(_kBorderColor),
       ),
     );
-
-    if (value == null) {
-      return;
-    }
-
-    if (value is int) {
-      cell.value = IntCellValue(value);
-    } else if (value is double) {
-      cell.value = DoubleCellValue(value);
-    } else if (value is num) {
-      cell.value = DoubleCellValue(value.toDouble());
-    } else {
-      cell.value = TextCellValue(value.toString());
-    }
   }
 
   void _downloadFile(
