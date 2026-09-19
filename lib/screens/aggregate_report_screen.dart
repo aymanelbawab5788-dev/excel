@@ -21,9 +21,9 @@ const List<String> _kArabicMonthNames = [
   'ديسمبر',
 ];
 
-/// خانة شهر واحد داخل الفترة المختارة: رقم الشهر + الملف اللي هيتربط بيه
+/// خانة شهر واحد داخل الفترة المختارة
 class _MonthSlot {
-  final int monthNumber; // 1..12
+  final int monthNumber;
   Uint8List? fileBytes;
   String? fileName;
 
@@ -32,15 +32,15 @@ class _MonthSlot {
   String get monthName => _kArabicMonthNames[monthNumber - 1];
 }
 
-/// بيانات سيارة واحدة متجمّعة عبر كل شهور الفترة
+/// بيانات سيارة واحدة متجمعة عبر كل شهور الفترة
 class _CarAggregate {
-  final String recordNumber; // المفتاح الأساسي
+  final String recordNumber;
   String carNumber;
   String letters;
   num? startOdometer;
   num? endOdometer;
 
-  /// key = فهرس الشهر داخل قائمة الفترة (0 = أول شهر بالفترة)
+  /// المفتاح = فهرس الشهر داخل الفترة
   final Map<int, num> monthlyQuantities = {};
 
   _CarAggregate({
@@ -88,8 +88,9 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
   }
 
   // =========================
-  // بناء تسلسل الشهور الزمني (بيتعامل مع عبور نهاية السنة)
+  // بناء تسلسل الشهور
   // =========================
+
   List<int> _buildMonthSequence(int from, int to) {
     final sequence = <int>[];
     int current = from;
@@ -103,7 +104,6 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
 
       current = current == 12 ? 1 : current + 1;
 
-      // حماية من حلقة لا نهائية لو حصل خطأ غير متوقع
       if (sequence.length > 12) {
         break;
       }
@@ -117,7 +117,10 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
       return;
     }
 
-    final sequence = _buildMonthSequence(_fromMonth!, _toMonth!);
+    final sequence = _buildMonthSequence(
+      _fromMonth!,
+      _toMonth!,
+    );
 
     setState(() {
       _monthSlots = sequence.map((m) => _MonthSlot(m)).toList();
@@ -186,20 +189,13 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
   }
 
   // =========================
-  // المنطق الأساسي: قراءة كل شهر وتجميع بيانات السيارات
+  // قراءة وتجميع الملفات
   // =========================
-  Uint8List _buildAggregateReport(List<_MonthSlot> slots) {
-    // key = رقم السجل
-    final Map<String, _CarAggregate> carsByRecord = {};
 
-    // بنحافظ على ترتيب أول ظهور لكل سيارة عشان نرتب صفوف التقرير بنفس
-    // منطق "أول ظهور بالفترة"، مش بترتيب عشوائي
+  Uint8List _buildAggregateReport(List<_MonthSlot> slots) {
+    final Map<String, _CarAggregate> carsByRecord = {};
     final List<String> recordOrder = [];
 
-    // مهم جدًا: بنمرّ على الشهور بترتيبها الزمني في "slots" (اللي هي
-    // أصلاً مبنية من _buildMonthSequence)، مش بأي ترتيب تاني - وده
-    // اللي بيضمن إن عداد البداية والنهاية يتحسبوا صح حتى لو المستخدم
-    // اختار/رفع الملفات مش بترتيبها.
     for (int slotIndex = 0; slotIndex < slots.length; slotIndex++) {
       final slot = slots[slotIndex];
       final bytes = slot.fileBytes!;
@@ -228,11 +224,13 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
 
       final carNumIndex = headerMap['رقم السيارة'];
       final lettersIndex = headerMap['الأحرف'];
+
       final portSaidIndex = headerMap['بورسعيد'];
       final ismailiaIndex = headerMap['إسماعيلية'];
       final suezIndex = headerMap['سويس'];
       final smartCardIndex = headerMap['كارت ذكي'];
       final gasIndex = headerMap['غاز'];
+
       final startOdoIndex = headerMap['عداد البداية'];
       final endOdoIndex = headerMap['آخر عداد بالفترة'];
 
@@ -241,35 +239,43 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
       for (int r = headerRowIndex + 1; r < rows.length; r++) {
         final row = rows[r];
 
-        final recordNumber = _cellText(row, recordIndex).trim();
+        final recordNumber = _cellText(
+          row,
+          recordIndex,
+        ).trim();
 
-        // تجاهل الصفوف الفاضية وصف "الإجمالي" في آخر الجدول
         if (recordNumber.isEmpty || recordNumber == 'الإجمالي') {
           continue;
         }
 
-        final carNumber =
-            carNumIndex != null ? _cellText(row, carNumIndex).trim() : '';
-        final letters =
-            lettersIndex != null ? _cellText(row, lettersIndex).trim() : '';
+        final carNumber = carNumIndex != null
+            ? _cellText(row, carNumIndex).trim()
+            : '';
 
-        // ===== الكمية الإجمالية =====
-        // ملحوظة مهمة: عمود "الكمية الإجمالية" في ملف كشف النسبة
-        // مكتوب كمعادلة إكسل (=SUM(...))، ومعادلة من غير قيمة محفوظة
-        // (لو الملف اتصدّر من البرنامج ومتفتحش في إكسل حقيقي قبل كده)
-        // بترجع صفر لو اتقرت برمجيًا. عشان كده منقراش العمود ده خالص،
-        // وبنعيد حساب الكمية بنفسنا من الأعمدة الخام (بورسعيد+
-        // إسماعيلية+سويس+كارت ذكي+غاز) اللي هي أرقام عادية مش معادلات.
+        final letters = lettersIndex != null
+            ? _cellText(row, lettersIndex).trim()
+            : '';
+
+        // إعادة حساب كمية الشهر من الأعمدة الأصلية
+        // بدل الاعتماد على قيمة FormulaCellValue.
         final quantity = _numberValue(row, portSaidIndex) +
             _numberValue(row, ismailiaIndex) +
             _numberValue(row, suezIndex) +
             _numberValue(row, smartCardIndex) +
             _numberValue(row, gasIndex);
 
-        final startOdo = _numberValue(row, startOdoIndex);
-        final endOdo = _numberValue(row, endOdoIndex);
+        final startOdo = _numberValue(
+          row,
+          startOdoIndex,
+        );
 
-        final isNewCar = !carsByRecord.containsKey(recordNumber);
+        final endOdo = _numberValue(
+          row,
+          endOdoIndex,
+        );
+
+        final isNewCar =
+            !carsByRecord.containsKey(recordNumber);
 
         final car = carsByRecord.putIfAbsent(
           recordNumber,
@@ -284,39 +290,44 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
           recordOrder.add(recordNumber);
         }
 
-        // عداد بداية الفترة = العداد في أول شهر تظهر فيه السيارة فعليًا
-        // (مش بالضرورة أول شهر في الفترة كلها)
+        // عداد بداية الفترة:
+        // أول شهر تظهر فيه السيارة فعليًا.
         car.startOdometer ??= startOdo;
 
-        // عداد نهاية الفترة = آخر عداد في آخر شهر تظهر فيه السيارة.
-        // بما إننا بنمشي على الشهور بترتيبها الزمني، كل ظهور جديد
-        // بيحدّث القيمة دي تلقائيًا لتبقى دايمًا "آخر" ظهور فعلي.
+        // عداد نهاية الفترة:
+        // آخر شهر تظهر فيه السيارة.
         car.endOdometer = endOdo;
 
+        // كمية هذا الشهر.
         car.monthlyQuantities[slotIndex] = quantity;
 
         if (car.carNumber.isEmpty && carNumber.isNotEmpty) {
           car.carNumber = carNumber;
         }
+
         if (car.letters.isEmpty && letters.isNotEmpty) {
           car.letters = letters;
         }
       }
     }
 
-    return _writeOutput(slots, carsByRecord, recordOrder);
+    return _writeOutput(
+      slots,
+      carsByRecord,
+      recordOrder,
+    );
   }
 
-  /// بيدوّر جوه كل الشيتات المتاحة في الملف عن أول صف فيه عمود
-  /// "رقم السجل" (بغض النظر عن اسم الشيت أو ترتيب الأعمدة أو رقم
-  /// الصف)، ويرجّع خريطة "اسم العمود -> رقمه" عشان القراءة تبقى مرنة
-  /// تمامًا مع أي شكل شيت.
+  // =========================
+  // البحث عن صف العناوين
+  // =========================
+
   _ParsedHeader? _locateHeaderRow(ex.Excel excel) {
     for (final table in excel.tables.values) {
       final rows = table.rows;
 
-      // العناوين غالبًا في أول 5 صفوف بس (بعد صف عنوان التقرير المدمج)
-      final maxRowsToScan = rows.length < 5 ? rows.length : 5;
+      final maxRowsToScan =
+          rows.length < 5 ? rows.length : 5;
 
       for (int r = 0; r < maxRowsToScan; r++) {
         final headerMap = _findHeaders(rows[r]);
@@ -334,13 +345,14 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
     return null;
   }
 
-  /// بيقرا نص صف كامل ويرجّع خريطة "اسم العمود -> رقم العمود"،
-  /// بغض النظر عن ترتيب الأعمدة أو مكانها في الشيت.
   Map<String, int> _findHeaders(List<ex.Data?> row) {
     final result = <String, int>{};
 
     for (int column = 0; column < row.length; column++) {
-      final text = _cellText(row, column).trim();
+      final text = _cellText(
+        row,
+        column,
+      ).trim();
 
       if (text.isNotEmpty) {
         result[text] = column;
@@ -350,8 +362,17 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
     return result;
   }
 
-  String _cellText(List<ex.Data?> row, int? index) {
-    if (index == null || index < 0 || index >= row.length) {
+  // =========================
+  // قراءة الخلية كنص
+  // =========================
+
+  String _cellText(
+    List<ex.Data?> row,
+    int? index,
+  ) {
+    if (index == null ||
+        index < 0 ||
+        index >= row.length) {
       return '';
     }
 
@@ -378,8 +399,17 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
     return value.toString();
   }
 
-  num _numberValue(List<ex.Data?> row, int? index) {
-    if (index == null || index < 0 || index >= row.length) {
+  // =========================
+  // قراءة الخلية كرقم
+  // =========================
+
+  num _numberValue(
+    List<ex.Data?> row,
+    int? index,
+  ) {
+    if (index == null ||
+        index < 0 ||
+        index >= row.length) {
       return 0;
     }
 
@@ -399,8 +429,6 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
       return value.value;
     }
 
-    // أي معادلة (FormulaCellValue) بترجع صفر عمدًا - مبنعتمدش على قيم
-    // محسوبة جوه معادلات، خصوصًا لو الملف متفتحش في إكسل قبل القراءة.
     if (value is ex.FormulaCellValue) {
       return 0;
     }
@@ -408,6 +436,7 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
     if (value is ex.TextCellValue) {
       final raw = value.value.text ?? '';
       final cleaned = raw.replaceAll(',', '').trim();
+
       return num.tryParse(cleaned) ?? 0;
     }
 
@@ -415,60 +444,94 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
   }
 
   // =========================
-  // بناء ملف الإخراج النهائي
+  // بناء ملف التقرير النهائي
   // =========================
+
   Uint8List _writeOutput(
     List<_MonthSlot> slots,
     Map<String, _CarAggregate> carsByRecord,
     List<String> recordOrder,
   ) {
     final outputExcel = ex.Excel.createExcel();
+
     final sheet = outputExcel['التقرير التجميعي'];
 
     final defaultSheet = outputExcel.getDefaultSheet();
-    if (defaultSheet != null && defaultSheet != 'التقرير التجميعي') {
+
+    if (defaultSheet != null &&
+        defaultSheet != 'التقرير التجميعي') {
       outputExcel.delete(defaultSheet);
     }
 
     sheet.isRTL = true;
 
-    // ===== ترتيب الأعمدة =====
-    // 0: م
-    // 1: رقم السجل
-    // 2: رقم السيارة
-    // 3: الأحرف
-    // 4: عداد بداية الفترة
-    // 5..(5+N-1): شهور الفترة بالترتيب
-    // 5+N: عداد نهاية الفترة
-    // 5+N+1: إجمالي الفترة (عداد النهاية - عداد البداية)
-    // 5+N+2: إجمالي الكمية (SUM على شهور الفترة)
+    // ==================================================
+    // ترتيب الأعمدة النهائي
+    //
+    // م
+    // رقم السجل
+    // رقم السيارة
+    // الأحرف
+    // يناير
+    // فبراير
+    // ...
+    // إجمالي الكمية
+    // عداد بداية الفترة
+    // عداد نهاية الفترة
+    // إجمالي المسافة
+    // ==================================================
+
     final monthCount = slots.length;
+
     final firstMonthColumn = 4;
-    final endOdoColumn = firstMonthColumn + monthCount;
-    final periodTotalColumn = endOdoColumn + 1;
-    final quantityTotalColumn = periodTotalColumn + 1;
-    final lastColumn = quantityTotalColumn;
+
+    final quantityTotalColumn =
+        firstMonthColumn + monthCount;
+
+    final startOdoColumn =
+        quantityTotalColumn + 1;
+
+    final endOdoColumn =
+        startOdoColumn + 1;
+
+    final periodTotalColumn =
+        endOdoColumn + 1;
+
+    final lastColumn = periodTotalColumn;
+
+    // =========================
+    // رؤوس الأعمدة
+    // =========================
 
     final headers = <String>[
       'م',
       'رقم السجل',
       'رقم السيارة',
       'الأحرف',
-      'عداد بداية الفترة',
       for (final slot in slots) slot.monthName,
-      'عداد نهاية الفترة',
-      'إجمالي الفترة',
       'إجمالي الكمية',
+      'عداد بداية الفترة',
+      'عداد نهاية الفترة',
+      'إجمالي المسافة',
     ];
 
-    // ===== صف العنوان =====
+    // =========================
+    // عنوان التقرير
+    // =========================
+
     final periodLabel = slots.length == 1
         ? slots.first.monthName
         : '${slots.first.monthName} إلى ${slots.last.monthName}';
 
     sheet.merge(
-      ex.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
-      ex.CellIndex.indexByColumnRow(columnIndex: lastColumn, rowIndex: 0),
+      ex.CellIndex.indexByColumnRow(
+        columnIndex: 0,
+        rowIndex: 0,
+      ),
+      ex.CellIndex.indexByColumnRow(
+        columnIndex: lastColumn,
+        rowIndex: 0,
+      ),
     );
 
     _writeCell(
@@ -484,7 +547,10 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
 
     sheet.setRowHeight(0, 28);
 
-    // ===== صف رؤوس الأعمدة =====
+    // =========================
+    // صف رؤوس الأعمدة
+    // =========================
+
     for (int c = 0; c < headers.length; c++) {
       _writeCell(
         sheet,
@@ -499,29 +565,62 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
 
     sheet.setRowHeight(1, 22);
 
-    // ===== صفوف البيانات =====
+    // =========================
+    // صفوف السيارات
+    // =========================
+
     var outputRow = 2;
     var serial = 1;
 
     for (final recordNumber in recordOrder) {
       final car = carsByRecord[recordNumber]!;
+
       final isAltRow = serial.isOdd;
 
-      _writeCell(sheet, 0, outputRow, serial, isAltRow: isAltRow);
-      _writeCell(sheet, 1, outputRow, car.recordNumber, isAltRow: isAltRow);
-      _writeCell(sheet, 2, outputRow, car.carNumber, isAltRow: isAltRow);
-      _writeCell(sheet, 3, outputRow, car.letters, isAltRow: isAltRow);
-
+      // م
       _writeCell(
         sheet,
-        4,
+        0,
         outputRow,
-        car.startOdometer ?? 0,
-        backgroundHex: _kOdometerColor,
+        serial,
+        isAltRow: isAltRow,
       );
 
+      // رقم السجل
+      _writeCell(
+        sheet,
+        1,
+        outputRow,
+        car.recordNumber,
+        isAltRow: isAltRow,
+      );
+
+      // رقم السيارة
+      _writeCell(
+        sheet,
+        2,
+        outputRow,
+        car.carNumber,
+        isAltRow: isAltRow,
+      );
+
+      // الأحرف
+      _writeCell(
+        sheet,
+        3,
+        outputRow,
+        car.letters,
+        isAltRow: isAltRow,
+      );
+
+      // =========================
+      // الشهور
+      // =========================
+
       for (int m = 0; m < monthCount; m++) {
-        final quantity = car.monthlyQuantities[m] ?? 0;
+        final quantity =
+            car.monthlyQuantities[m] ?? 0;
+
         _writeCell(
           sheet,
           firstMonthColumn + m,
@@ -531,35 +630,20 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
         );
       }
 
-      _writeCell(
-        sheet,
-        endOdoColumn,
-        outputRow,
-        car.endOdometer ?? 0,
-        backgroundHex: _kOdometerColor,
-      );
-
       final excelRow = outputRow + 1;
-      final startOdoColLetter = _columnLetter(4);
-      final endOdoColLetter = _columnLetter(endOdoColumn);
-      final fromMonthCol = _columnLetter(firstMonthColumn);
-      final toMonthCol = _columnLetter(endOdoColumn - 1);
 
-      // إجمالي الفترة = عداد النهاية - عداد البداية (نفس الصف)
-      sheet.updateCell(
-        ex.CellIndex.indexByColumnRow(
-          columnIndex: periodTotalColumn,
-          rowIndex: outputRow,
-        ),
-        ex.FormulaCellValue(
-          '$endOdoColLetter$excelRow-$startOdoColLetter$excelRow',
-        ),
-        cellStyle: _cellStyle(backgroundHex: _kTotalColor, bold: true),
+      // =========================
+      // إجمالي الكمية
+      // =========================
+
+      final fromMonthCol =
+          _columnLetter(firstMonthColumn);
+
+      final toMonthCol =
+          _columnLetter(
+        firstMonthColumn + monthCount - 1,
       );
 
-      // إجمالي الكمية = معادلة SUM على أعمدة الشهور بنفس الصف. الأعمدة
-      // دي كلها قيم عادية كتبناها إحنا (مش معادلات مقروءة من ملف
-      // خارجي)، فمفيش مشكلة caching هنا خالص.
       sheet.updateCell(
         ex.CellIndex.indexByColumnRow(
           columnIndex: quantityTotalColumn,
@@ -568,47 +652,140 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
         ex.FormulaCellValue(
           'SUM($fromMonthCol$excelRow:$toMonthCol$excelRow)',
         ),
-        cellStyle: _cellStyle(backgroundHex: _kTotalColor, bold: true),
+        cellStyle: _cellStyle(
+          backgroundHex: _kTotalColor,
+          bold: true,
+        ),
+      );
+
+      // =========================
+      // عداد بداية الفترة
+      // =========================
+
+      _writeCell(
+        sheet,
+        startOdoColumn,
+        outputRow,
+        car.startOdometer ?? 0,
+        backgroundHex: _kOdometerColor,
+      );
+
+      // =========================
+      // عداد نهاية الفترة
+      // =========================
+
+      _writeCell(
+        sheet,
+        endOdoColumn,
+        outputRow,
+        car.endOdometer ?? 0,
+        backgroundHex: _kOdometerColor,
+      );
+
+      // =========================
+      // إجمالي المسافة
+      // = عداد النهاية - عداد البداية
+      // =========================
+
+      final startOdoColLetter =
+          _columnLetter(startOdoColumn);
+
+      final endOdoColLetter =
+          _columnLetter(endOdoColumn);
+
+      sheet.updateCell(
+        ex.CellIndex.indexByColumnRow(
+          columnIndex: periodTotalColumn,
+          rowIndex: outputRow,
+        ),
+        ex.FormulaCellValue(
+          '$endOdoColLetter$excelRow-$startOdoColLetter$excelRow',
+        ),
+        cellStyle: _cellStyle(
+          backgroundHex: _kTotalColor,
+          bold: true,
+        ),
       );
 
       outputRow++;
       serial++;
     }
 
-    // ===== عرض الأعمدة =====
+    // =========================
+    // عرض الأعمدة
+    // =========================
+
     sheet.setColumnWidth(0, 6);
     sheet.setColumnWidth(1, 12);
     sheet.setColumnWidth(2, 14);
     sheet.setColumnWidth(3, 10);
-    sheet.setColumnWidth(4, 14);
+
     for (int m = 0; m < monthCount; m++) {
-      sheet.setColumnWidth(firstMonthColumn + m, 12);
+      sheet.setColumnWidth(
+        firstMonthColumn + m,
+        12,
+      );
     }
-    sheet.setColumnWidth(endOdoColumn, 14);
-    sheet.setColumnWidth(periodTotalColumn, 14);
-    sheet.setColumnWidth(quantityTotalColumn, 14);
+
+    sheet.setColumnWidth(
+      quantityTotalColumn,
+      14,
+    );
+
+    sheet.setColumnWidth(
+      startOdoColumn,
+      14,
+    );
+
+    sheet.setColumnWidth(
+      endOdoColumn,
+      14,
+    );
+
+    sheet.setColumnWidth(
+      periodTotalColumn,
+      14,
+    );
+
+    // =========================
+    // إنشاء الملف
+    // =========================
 
     final encoded = outputExcel.encode();
 
     if (encoded == null) {
-      throw Exception('فشل إنشاء ملف التقرير التجميعي');
+      throw Exception(
+        'فشل إنشاء ملف التقرير التجميعي',
+      );
     }
 
     return Uint8List.fromList(encoded);
   }
 
+  // =========================
+  // تحويل رقم العمود إلى حرف Excel
+  // =========================
+
   String _columnLetter(int index) {
     int number = index + 1;
+
     String result = '';
 
     while (number > 0) {
       final remainder = (number - 1) % 26;
-      result = String.fromCharCode(65 + remainder) + result;
+
+      result =
+          String.fromCharCode(65 + remainder) + result;
+
       number = (number - 1) ~/ 26;
     }
 
     return result;
   }
+
+  // =========================
+  // تنسيق الخلايا
+  // =========================
 
   ex.CellStyle _cellStyle({
     String backgroundHex = 'FFFFFFFF',
@@ -618,16 +795,27 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
   }) {
     final border = ex.Border(
       borderStyle: ex.BorderStyle.Thin,
-      borderColorHex: ex.ExcelColor.fromHexString(_kBorderColor),
+      borderColorHex:
+          ex.ExcelColor.fromHexString(
+        _kBorderColor,
+      ),
     );
 
     return ex.CellStyle(
-      backgroundColorHex: ex.ExcelColor.fromHexString(backgroundHex),
-      fontColorHex: ex.ExcelColor.fromHexString(fontColorHex),
+      backgroundColorHex:
+          ex.ExcelColor.fromHexString(
+        backgroundHex,
+      ),
+      fontColorHex:
+          ex.ExcelColor.fromHexString(
+        fontColorHex,
+      ),
       bold: bold,
       fontSize: fontSize,
-      horizontalAlign: ex.HorizontalAlign.Center,
-      verticalAlign: ex.VerticalAlign.Center,
+      horizontalAlign:
+          ex.HorizontalAlign.Center,
+      verticalAlign:
+          ex.VerticalAlign.Center,
       leftBorder: border,
       rightBorder: border,
       topBorder: border,
@@ -635,8 +823,10 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
     );
   }
 
-  /// بيكتب القيمة الأول وبعدين التنسيق، عشان الباكدج مبيمسحش الفورمات
-  /// وقت ما بيحدد صيغة الرقم تلقائيًا للخلية.
+  // =========================
+  // كتابة الخلية
+  // =========================
+
   void _writeCell(
     ex.Sheet sheet,
     int column,
@@ -649,7 +839,10 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
     int fontSize = 11,
   }) {
     final cell = sheet.cell(
-      ex.CellIndex.indexByColumnRow(columnIndex: column, rowIndex: row),
+      ex.CellIndex.indexByColumnRow(
+        columnIndex: column,
+        rowIndex: row,
+      ),
     );
 
     if (value is int) {
@@ -657,13 +850,18 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
     } else if (value is double) {
       cell.value = ex.DoubleCellValue(value);
     } else if (value is num) {
-      cell.value = ex.DoubleCellValue(value.toDouble());
+      cell.value =
+          ex.DoubleCellValue(value.toDouble());
     } else {
-      cell.value = ex.TextCellValue(value.toString());
+      cell.value =
+          ex.TextCellValue(value.toString());
     }
 
     final resolvedBackground =
-        backgroundHex ?? (isAltRow ? _kAltRowColor : 'FFFFFFFF');
+        backgroundHex ??
+            (isAltRow
+                ? _kAltRowColor
+                : 'FFFFFFFF');
 
     cell.cellStyle = _cellStyle(
       backgroundHex: resolvedBackground,
@@ -673,18 +871,25 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
     );
   }
 
+  // =========================
+  // تصدير الملف
+  // =========================
+
   void _exportFile() {
     if (_preparedFile == null) {
       return;
     }
 
-    String fileName = _fileNameController.text.trim();
+    String fileName =
+        _fileNameController.text.trim();
 
     if (fileName.isEmpty) {
       fileName = 'التقرير التجميعي';
     }
 
-    if (!fileName.toLowerCase().endsWith('.xlsx')) {
+    if (!fileName
+        .toLowerCase()
+        .endsWith('.xlsx')) {
       fileName = '$fileName.xlsx';
     }
 
@@ -693,13 +898,17 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
 
-    final url = html.Url.createObjectUrlFromBlob(blob);
+    final url =
+        html.Url.createObjectUrlFromBlob(blob);
 
     html.AnchorElement(href: url)
-      ..setAttribute('download', fileName)
+      ..setAttribute(
+        'download',
+        fileName,
+      )
       ..click();
 
-    html.Url.revokeObjectUrl(url);
+    html.Url.revokeObjectURL(url);
 
     setState(() {
       _status = 'تم تصدير الملف بنجاح';
@@ -709,80 +918,120 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
   // =========================
   // الواجهة
   // =========================
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('التقرير التجميعي'),
+          title:
+              const Text('التقرير التجميعي'),
           centerTitle: true,
         ),
         body: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 650),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+            constraints:
+                const BoxConstraints(
+              maxWidth: 650,
+            ),
+            child:
+                SingleChildScrollView(
+              padding:
+                  const EdgeInsets.all(24),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment:
+                    CrossAxisAlignment.stretch,
                 children: [
                   const Icon(
                     Icons.summarize_outlined,
                     size: 64,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(
+                    height: 16,
+                  ),
                   const Text(
                     'التقرير التجميعي',
-                    textAlign: TextAlign.center,
+                    textAlign:
+                        TextAlign.center,
                     style: TextStyle(
                       fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                      fontWeight:
+                          FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(
+                    height: 24,
+                  ),
 
                   // اختيار الفترة
                   Row(
                     children: [
                       Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _fromMonth,
-                          decoration: const InputDecoration(
-                            labelText: 'من شهر',
-                            border: OutlineInputBorder(),
+                        child:
+                            DropdownButtonFormField<
+                                int>(
+                          initialValue:
+                              _fromMonth,
+                          decoration:
+                              const InputDecoration(
+                            labelText:
+                                'من شهر',
+                            border:
+                                OutlineInputBorder(),
                           ),
                           items: [
-                            for (int m = 1; m <= 12; m++)
+                            for (int m = 1;
+                                m <= 12;
+                                m++)
                               DropdownMenuItem(
                                 value: m,
-                                child: Text(_kArabicMonthNames[m - 1]),
+                                child: Text(
+                                  _kArabicMonthNames[
+                                      m - 1],
+                                ),
                               ),
                           ],
                           onChanged: (value) {
                             setState(() {
-                              _fromMonth = value;
+                              _fromMonth =
+                                  value;
                             });
                           },
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(
+                        width: 12,
+                      ),
                       Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: _toMonth,
-                          decoration: const InputDecoration(
-                            labelText: 'إلى شهر',
-                            border: OutlineInputBorder(),
+                        child:
+                            DropdownButtonFormField<
+                                int>(
+                          initialValue:
+                              _toMonth,
+                          decoration:
+                              const InputDecoration(
+                            labelText:
+                                'إلى شهر',
+                            border:
+                                OutlineInputBorder(),
                           ),
                           items: [
-                            for (int m = 1; m <= 12; m++)
+                            for (int m = 1;
+                                m <= 12;
+                                m++)
                               DropdownMenuItem(
                                 value: m,
-                                child: Text(_kArabicMonthNames[m - 1]),
+                                child: Text(
+                                  _kArabicMonthNames[
+                                      m - 1],
+                                ),
                               ),
                           ],
                           onChanged: (value) {
                             setState(() {
-                              _toMonth = value;
+                              _toMonth =
+                                  value;
                             });
                           },
                         ),
@@ -790,97 +1039,166 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 12),
-
-                  ElevatedButton(
-                    onPressed: (_fromMonth == null || _toMonth == null)
-                        ? null
-                        : _applyPeriod,
-                    child: const Text('تحديد الفترة'),
+                  const SizedBox(
+                    height: 12,
                   ),
 
-                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed:
+                        (_fromMonth == null ||
+                                _toMonth == null)
+                            ? null
+                            : _applyPeriod,
+                    child: const Text(
+                      'تحديد الفترة',
+                    ),
+                  ),
 
-                  // خانات رفع ملف كل شهر
+                  const SizedBox(
+                    height: 20,
+                  ),
+
+                  // ملفات الشهور
                   if (_monthSlots.isNotEmpty) ...[
                     const Align(
-                      alignment: Alignment.centerRight,
+                      alignment:
+                          Alignment.centerRight,
                       child: Text(
                         'ارفع ملف كل شهر:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    for (final slot in _monthSlots)
-                      Card(
-                        child: ListTile(
-                          title: Text(slot.monthName),
-                          subtitle: Text(
-                            slot.fileName ?? 'لم يتم اختيار ملف بعد',
-                            style: TextStyle(
-                              color: slot.fileBytes != null
-                                  ? Colors.green.shade700
-                                  : Colors.grey.shade600,
-                            ),
-                          ),
-                          trailing: IconButton(
-                            icon: Icon(
-                              slot.fileBytes != null
-                                  ? Icons.check_circle
-                                  : Icons.upload_file,
-                              color: slot.fileBytes != null
-                                  ? Colors.green
-                                  : null,
-                            ),
-                            onPressed: () => _pickFileForSlot(slot),
-                          ),
-                          onTap: () => _pickFileForSlot(slot),
+                        style: TextStyle(
+                          fontWeight:
+                              FontWeight.bold,
                         ),
                       ),
-                    const SizedBox(height: 16),
+                    ),
+                    const SizedBox(
+                      height: 8,
+                    ),
+                    for (final slot
+                        in _monthSlots)
+                      Card(
+                        child: ListTile(
+                          title: Text(
+                            slot.monthName,
+                          ),
+                          subtitle:
+                              Text(
+                            slot.fileName ??
+                                'لم يتم اختيار ملف بعد',
+                            style:
+                                TextStyle(
+                              color: slot
+                                      .fileBytes !=
+                                  null
+                                  ? Colors
+                                      .green
+                                      .shade700
+                                  : Colors
+                                      .grey
+                                      .shade600,
+                            ),
+                          ),
+                          trailing:
+                              IconButton(
+                            icon: Icon(
+                              slot.fileBytes !=
+                                      null
+                                  ? Icons
+                                      .check_circle
+                                  : Icons
+                                      .upload_file,
+                              color: slot
+                                      .fileBytes !=
+                                  null
+                                  ? Colors
+                                      .green
+                                  : null,
+                            ),
+                            onPressed: () =>
+                                _pickFileForSlot(
+                              slot,
+                            ),
+                          ),
+                          onTap: () =>
+                              _pickFileForSlot(
+                            slot,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(
+                      height: 16,
+                    ),
                   ],
 
                   // اسم الملف
                   TextField(
-                    controller: _fileNameController,
-                    textDirection: TextDirection.rtl,
-                    decoration: const InputDecoration(
-                      labelText: 'اسم الملف',
-                      border: OutlineInputBorder(),
+                    controller:
+                        _fileNameController,
+                    textDirection:
+                        TextDirection.rtl,
+                    decoration:
+                        const InputDecoration(
+                      labelText:
+                          'اسم الملف',
+                      border:
+                          OutlineInputBorder(),
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(
+                    height: 16,
+                  ),
 
                   Text(
                     _status,
-                    textAlign: TextAlign.center,
+                    textAlign:
+                        TextAlign.center,
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(
+                    height: 16,
+                  ),
 
                   ElevatedButton.icon(
-                    onPressed: (!_allSlotsFilled || _isProcessing)
-                        ? null
-                        : _generateReport,
+                    onPressed:
+                        (!_allSlotsFilled ||
+                                _isProcessing)
+                            ? null
+                            : _generateReport,
                     icon: _isProcessing
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child:
+                                CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
                           )
-                        : const Icon(Icons.summarize),
+                        : const Icon(
+                            Icons.summarize,
+                          ),
                     label: Text(
-                      _isProcessing ? 'جاري التجميع...' : 'توليد التقرير',
+                      _isProcessing
+                          ? 'جاري التجميع...'
+                          : 'توليد التقرير',
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(
+                    height: 12,
+                  ),
 
                   FilledButton.icon(
-                    onPressed: _preparedFile == null ? null : _exportFile,
-                    icon: const Icon(Icons.download),
-                    label: const Text('تصدير الملف'),
+                    onPressed:
+                        _preparedFile == null
+                            ? null
+                            : _exportFile,
+                    icon: const Icon(
+                      Icons.download,
+                    ),
+                    label: const Text(
+                      'تصدير الملف',
+                    ),
                   ),
                 ],
               ),
