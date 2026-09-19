@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'percentage_screen.dart';
 import 'calculation_530_screen.dart';
 import 'invoices_screen.dart';
+import 'screens/aggregate_report_screen.dart';
 
 void main() {
   runApp(const ExcelFormatterApp());
@@ -45,6 +46,11 @@ class HomePage extends StatelessWidget {
       description: 'معالجة وتنسيق ملفات الفواتير',
       icon: Icons.receipt_long_rounded,
     ),
+    _ExcelSection(
+      title: 'التقرير التجميعي',
+      description: 'تجميع بيانات السيارات عبر عدة أشهر',
+      icon: Icons.summarize_outlined,
+    ),
   ];
 
   void _openSection(BuildContext context, String title) {
@@ -73,6 +79,16 @@ class HomePage extends StatelessWidget {
         context,
         MaterialPageRoute(
           builder: (_) => const InvoicesScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (title == 'التقرير التجميعي') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const AggregateReportScreen(),
         ),
       );
       return;
