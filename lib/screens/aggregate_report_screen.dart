@@ -908,7 +908,7 @@ class _AggregateReportScreenState extends State<AggregateReportScreen> {
       )
       ..click();
 
-    html.Url.revokeObjectURL(url);
+    html.Url.revokeObjectUrl(url);
 
     setState(() {
       _status = 'تم تصدير الملف بنجاح';
