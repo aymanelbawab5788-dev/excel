@@ -8,9 +8,9 @@ import 'package:universal_html/html.dart' as html;
 /// حقل بيانات مركبة ممكن إضافته للتقرير كعمود جديد
 class _VehicleField {
   final String label;
-  bool selected;
+  bool selected = false;
 
-  _VehicleField(this.label, {this.selected = false});
+  _VehicleField(this.label);
 }
 
 /// نتيجة تحديد صف العناوين داخل شيت (رقم الصف + خريطة اسم العمود -> رقمه)
@@ -256,7 +256,7 @@ class _AddVehicleDataScreenState extends State<AddVehicleDataScreen> {
     }
 
     // ===== 6) إضافة الأعمدة الجديدة في نهاية أعمدة التقرير الحالية =====
-    final newStartColumn = reportSheet.maxCols;
+    final newStartColumn = reportSheet.maxColumns;
 
     // ننسخ تنسيق الهيدر من أول عمود موجود فعلًا في صف العناوين، عشان
     // عناوين الأعمدة الجديدة تطلع بنفس شكل هيدر التقرير بالظبط.
