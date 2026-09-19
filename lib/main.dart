@@ -4,6 +4,7 @@ import 'percentage_screen.dart';
 import 'calculation_530_screen.dart';
 import 'invoices_screen.dart';
 import 'screens/aggregate_report_screen.dart';
+import 'screens/gas_aggregate_report_screen.dart';
 
 void main() {
   runApp(const ExcelFormatterApp());
@@ -51,6 +52,11 @@ class HomePage extends StatelessWidget {
       description: 'تجميع بيانات السيارات عبر عدة أشهر',
       icon: Icons.summarize_outlined,
     ),
+    _ExcelSection(
+      title: 'التقرير التجميعي غاز',
+      description: 'تجميع كميات الغاز فقط عبر عدة أشهر',
+      icon: Icons.local_gas_station_outlined,
+    ),
   ];
 
   void _openSection(BuildContext context, String title) {
@@ -89,6 +95,16 @@ class HomePage extends StatelessWidget {
         context,
         MaterialPageRoute(
           builder: (_) => const AggregateReportScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (title == 'التقرير التجميعي غاز') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const GasAggregateReportScreen(),
         ),
       );
       return;
@@ -236,6 +252,7 @@ class _ExcelActionCard extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 58,
@@ -251,24 +268,37 @@ class _ExcelActionCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
-              Text(
-                section.title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
+              // النص بجانب الأيقونة كان بيعمل Overflow لو العنوان طويل
+              // (مثل "التقرير التجميعي غاز") لأن الـ Text ماكانش محدد له
+              // maxLines، فكان بياخد سطرين ويزوّد ارتفاع الكارت عن
+              // المساحة المتاحة. الحل: تحديد maxLines + Flexible
+              // عشان العنوان يظهر كامل من غير ما يعمل Overflow، ومن
+              // غير ما يأثر على شكل باقي الكروت اللي عنوانها قصير أصلًا.
+              Flexible(
+                child: Text(
+                  section.title,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    height: 1.15,
+                  ),
                 ),
               ),
               const SizedBox(height: 7),
-              Text(
-                section.description,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  height: 1.4,
-                  color: Colors.grey.shade600,
+              Flexible(
+                child: Text(
+                  section.description,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
               ),
             ],
