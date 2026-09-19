@@ -250,58 +250,67 @@ class _ExcelActionCard extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(18),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  section.icon,
-                  size: 30,
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(height: 14),
-              // النص بجانب الأيقونة كان بيعمل Overflow لو العنوان طويل
-              // (مثل "التقرير التجميعي غاز") لأن الـ Text ماكانش محدد له
-              // maxLines، فكان بياخد سطرين ويزوّد ارتفاع الكارت عن
-              // المساحة المتاحة. الحل: تحديد maxLines + Flexible
-              // عشان العنوان يظهر كامل من غير ما يعمل Overflow، ومن
-              // غير ما يأثر على شكل باقي الكروت اللي عنوانها قصير أصلًا.
-              Flexible(
-                child: Text(
-                  section.title,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    height: 1.15,
+          // السبب الحقيقي للـ Overflow اللي بيظهر في كل الكروت (مش بس
+          // كارت الغاز) هو إعداد "حجم الخط" الكبير في نظام الموبايل:
+          // فلاتر بيحترم إعداد الـ textScale بتاع الجهاز تلقائيًا، فلو
+          // المستخدم ضابط خط الجهاز كبير، النص جوه التطبيق كله بيكبر،
+          // لكن حجم الكارت نفسه ثابت (متحسوب من عرض الشاشة بس)، فالنص
+          // الأكبر بيطلع بره حدود الكارت. الحل: نثبّت textScale لكروت
+          // العمليات بس عند 1.0 عشان تفضل ثابتة الشكل مهما كان إعداد
+          // خط الجهاز، من غير ما نأثر على باقي شاشات التطبيق.
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(1.0),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    section.icon,
+                    size: 30,
+                    color: Colors.blue,
                   ),
                 ),
-              ),
-              const SizedBox(height: 7),
-              Flexible(
-                child: Text(
-                  section.description,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.4,
-                    color: Colors.grey.shade600,
+                const SizedBox(height: 14),
+                // maxLines + Flexible كحماية إضافية لو العنوان طويل
+                // (مثل "التقرير التجميعي غاز") حتى بعد تثبيت textScale.
+                Flexible(
+                  child: Text(
+                    section.title,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      height: 1.15,
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 7),
+                Flexible(
+                  child: Text(
+                    section.description,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
